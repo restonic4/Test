@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.core;
 
+import com.chaotic_loom.game.networking.ClientLoginHandler;
 import com.chaotic_loom.game.networking.PacketDecoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -31,6 +32,8 @@ public class TempServer {
 
                                 // Optionally, add an IdleStateHandler to detect connection issues
                                 pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
+
+                                pipeline.addLast(new ClientLoginHandler());
 
                                 // Add your custom packet decoder and encoder
                                 pipeline.addLast(new PacketDecoder());
