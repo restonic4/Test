@@ -1,13 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
+        <RollingFile name="FileAppender"
+                     fileName="logs/last.log"
+                     filePattern="logs/last-%d{yyyy-MM-dd-HH-mm-ss}.log">
+            <PatternLayout>
+                <Pattern>[%d{yyyy/MM/dd | HH:mm:ss.SSS}] %-5level [%logger/%t]: %msg%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout disableAnsi="false"
-                           pattern="[%d{yyyy/MM/dd | HH:mm:ss}] %style{[%logger/%t]:}{cyan} %highlight{%msg}{FATAL=red blink, ERROR=red, WARN=yellow, INFO=default, DEBUG=blue, TRACE=cyan}%n%style{%ex}{red}" />
+                           pattern="[%d{yyyy/MM/dd | HH:mm:ss.SSS}] %style{[%logger/%t]:}{cyan} %highlight{%msg}{FATAL=red blink, ERROR=red, WARN=yellow, INFO=default, DEBUG=blue, TRACE=cyan}%n%style{%ex}{red}" />
         </Console>
     </Appenders>
     <Loggers>
-        <Root level="debug">
+        <!-- Ensure all loggers use the same appender -->
+        <Root level="${sys:logLevel:-INFO}">
+            <AppenderRef ref="FileAppender"/>
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

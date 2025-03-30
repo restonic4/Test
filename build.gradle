@@ -107,7 +107,20 @@ tasks.register('runClient', JavaExec) {
     def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('clientRunDir')
     args '--gamedir', gameDirArg
 
-    workingDir project.projectDir
+    systemProperty "logLevel", System.getProperty("logLevel", "DEBUG")
+
+    def gameDirFile = project.file(gameDirArg)
+
+    doFirst {
+        if (!gameDirFile.exists()) {
+            logger.warn("Working directory/Game directory does not exist, creating: ${gameDirFile.absolutePath}")
+            gameDirFile.mkdirs()
+        } else if (!gameDirFile.isDirectory()) {
+            throw new InvalidUserDataException("Specified game directory exists but is not a directory: ${gameDirFile.absolutePath}")
+        }
+    }
+
+    workingDir gameDirFile
 }
 
 // Run server
@@ -122,7 +135,20 @@ tasks.register('runServer', JavaExec) {
     def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('serverRunDir')
     args '--gamedir', gameDirArg
 
-    workingDir project.projectDir
+    systemProperty "logLevel", System.getProperty("logLevel", "DEBUG")
+
+    def gameDirFile = project.file(gameDirArg)
+
+    doFirst {
+        if (!gameDirFile.exists()) {
+            logger.warn("Working directory/Game directory does not exist, creating: ${gameDirFile.absolutePath}")
+            gameDirFile.mkdirs()
+        } else if (!gameDirFile.isDirectory()) {
+            throw new InvalidUserDataException("Specified game directory exists but is not a directory: ${gameDirFile.absolutePath}")
+        }
+    }
+
+    workingDir gameDirFile
 }
 
 
