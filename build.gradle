@@ -105,8 +105,12 @@ tasks.register('runClient', JavaExec) {
 
     // -- Command Line Arguments -- //
     def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('clientRunDir')
-    args '--gamedir', gameDirArg
+    args(
+            '--gamedir', gameDirArg,
+            '--username', project.findProperty('runUsername')
+    )
 
+    // -- Run dir -- //
     systemProperty "logLevel", System.getProperty("logLevel", "DEBUG")
 
     def gameDirFile = project.file(gameDirArg)
@@ -135,6 +139,7 @@ tasks.register('runServer', JavaExec) {
     def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('serverRunDir')
     args '--gamedir', gameDirArg
 
+    // -- Run dir -- //
     systemProperty "logLevel", System.getProperty("logLevel", "DEBUG")
 
     def gameDirFile = project.file(gameDirArg)

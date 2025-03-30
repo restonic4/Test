@@ -8,9 +8,12 @@ import java.nio.file.Path;
 
 public abstract class AbstractLauncher {
     private static final Logger logger = LogManager.getLogger("Launcher");
+    private static AbstractEngine engine;
 
     protected static void launch(AbstractEngine engine, String[] args) {
         logger.info("Launching {} engine", engine.getEnvironment());
+
+        AbstractLauncher.engine = engine;
 
         if (logger.isDebugEnabled()) {
             logger.debug("Launch arguments:");
@@ -25,11 +28,15 @@ public abstract class AbstractLauncher {
 
             argsManager.throwIfMissing("gamedir");
 
-            engine.setRunPath(Path.of(argsManager.getValue("gamedir")));
+            engine.setArgsManager(argsManager);
             engine.run();
         } catch (Exception e) {
             logger.error("Critical Launcher error:", e);
             System.exit(-1);
         }
+    }
+
+    public static AbstractEngine getEngine() {
+        return engine;
     }
 }

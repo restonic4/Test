@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.registries.built_in;
 
+import com.chaotic_loom.game.networking.components.Packet;
 import com.chaotic_loom.game.registries.components.RegistryKey;
 
 import java.util.HashMap;
@@ -7,7 +8,7 @@ import java.util.HashMap;
 public abstract class RegistryKeys {
     private static final HashMap<String, RegistryKey<?>> keys = new HashMap<>();
 
-    //public static final RegistryKey<Item> ITEMS = registerKey("items");
+    public static final RegistryKey<Packet> PACKETS = registerKey("packets");
 
     private static <T> RegistryKey<T> registerKey(String key) {
         if (keys.containsKey(key)) {

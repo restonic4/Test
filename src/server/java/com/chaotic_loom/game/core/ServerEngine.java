@@ -1,11 +1,11 @@
 package com.chaotic_loom.game.core;
 
-public class ServerEngine extends AbstractEngine {
+import com.chaotic_loom.game.networking.NettyServerHelper;
+import com.chaotic_loom.game.networking.packets.LoginPacket;
+import com.chaotic_loom.game.registries.built_in.Packets;
+import io.netty.channel.Channel;
 
-    // Server-specific components
-    // private NetworkManager networkManager;
-    // private WorldManager worldManager;
-    // private List<ServerPlayer> connectedPlayers;
+public class ServerEngine extends AbstractEngine {
     private final ServerTimer timer;
 
     public ServerEngine() {
@@ -15,16 +15,19 @@ public class ServerEngine extends AbstractEngine {
     }
 
     @Override
-    protected void init() throws Exception {
-        timer.init(); // ServerTimer init
-        // networkManager.start(port);
-        // worldManager.loadInitialState();
+    protected void init() {
+        timer.init();
+
+        Channel serverChannel = NettyServerHelper.init();
+        getNetworkingManager().setChannel(serverChannel);
 
         getLogger().info("Server Engine Initialized.");
+
+        Packets.LOGIN.send();
     }
 
     @Override
-    protected void gameLoop() throws Exception {
+    protected void gameLoop() {
         getLogger().info("Starting server game loop...");
 
         final float interval = 1f / ServerConstants.TARGET_UPS; // Fixed time step interval

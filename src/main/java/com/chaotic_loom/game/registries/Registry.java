@@ -1,6 +1,8 @@
 package com.chaotic_loom.game.registries;
 
 import com.chaotic_loom.game.core.Environment;
+import com.chaotic_loom.game.networking.components.Packet;
+import com.chaotic_loom.game.registries.built_in.RegistryKeys;
 import com.chaotic_loom.game.registries.components.Identifier;
 import com.chaotic_loom.game.registries.components.Registration;
 import com.chaotic_loom.game.registries.components.RegistryKey;

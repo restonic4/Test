@@ -9,7 +9,7 @@
             <Policies>
                 <OnStartupTriggeringPolicy />
             </Policies>
-            <DefaultRolloverStrategy max="10"/>
+            <DefaultRolloverStrategy max="25"/>
         </RollingFile>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout disableAnsi="false"

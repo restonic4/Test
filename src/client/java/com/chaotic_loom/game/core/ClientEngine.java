@@ -32,6 +32,8 @@ public class ClientEngine extends AbstractEngine {
 
     @Override
     protected void init() throws Exception {
+        getArgsManager().throwIfMissing("username");
+
         window.init();
         timer.init(); // ClientTimer init
         renderer.init(window);
@@ -47,6 +49,8 @@ public class ClientEngine extends AbstractEngine {
         cube2.getTransform().setPosition(-1.5f, 0.5f, -3);
         cube2.getTransform().setScale(0.5f);
         gameObjects.add(cube2);
+
+        TempServer.joinServer(this);
 
         getLogger().info("Client Engine Initialized.");
     }
