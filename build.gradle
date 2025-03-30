@@ -1,0 +1,177 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = "${group}"
+version = "${version}"
+
+// Determine the platform for native dependencies
+def platform
+if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+    platform = "windows"
+} else if (org.gradle.internal.os.OperatingSystem.current().isLinux()) {
+    platform = "linux"
+} else if (org.gradle.internal.os.OperatingSystem.current().isMacOsX()) {
+    platform = "macos"
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    clientImplementation.extendsFrom implementation
+    clientRuntimeOnly.extendsFrom runtimeOnly
+    serverImplementation.extendsFrom implementation
+    serverRuntimeOnly.extendsFrom runtimeOnly
+}
+
+dependencies {
+    // LWJGL Core
+    clientImplementation "org.lwjgl:lwjgl:${lwjglVersion}"
+    clientImplementation "org.lwjgl:lwjgl-glfw:${lwjglVersion}"
+    clientImplementation "org.lwjgl:lwjgl-opengl:${lwjglVersion}"
+    clientImplementation "org.lwjgl:lwjgl-jemalloc:${lwjglVersion}"
+    clientImplementation "org.lwjgl:lwjgl-stb:${lwjglVersion}"
+    clientImplementation "org.lwjgl:lwjgl-openal:${lwjglVersion}"
+
+    // LWJGL Native dependencies for the determined platform
+    clientRuntimeOnly "org.lwjgl:lwjgl:${lwjglVersion}:natives-${platform}"
+    clientRuntimeOnly "org.lwjgl:lwjgl-glfw:${lwjglVersion}:natives-${platform}"
+    clientRuntimeOnly "org.lwjgl:lwjgl-opengl:${lwjglVersion}:natives-${platform}"
+    clientRuntimeOnly "org.lwjgl:lwjgl-jemalloc:${lwjglVersion}:natives-${platform}"
+    clientRuntimeOnly "org.lwjgl:lwjgl-stb:${lwjglVersion}:natives-${platform}"
+    clientRuntimeOnly "org.lwjgl:lwjgl-openal:${lwjglVersion}:natives-${platform}"
+
+    // Math
+    implementation "org.joml:joml:${jomlVersion}"
+
+    // Networking
+    implementation "io.netty:netty-all:${nettyVersion}"
+
+    // Logger
+    implementation "org.apache.logging.log4j:log4j-api:${log4jVersion}"
+    implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    annotationProcessor "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+
+    // Reflection
+    implementation "org.reflections:reflections:${reflectionVersion}"
+    shadow "org.reflections:reflections:${reflectionVersion}"
+}
+
+
+
+// -- BUILDS -- //
+
+// Build client jar
+tasks.register('clientShadowJar', ShadowJar) {
+    archiveClassifier.set('client')
+    from sourceSets.main.output // Include common code
+    from sourceSets.client.output // Include client-specific code
+    from sourceSets.server.output // Include server-specific code, this is for single-player
+    configurations = [project.configurations.clientRuntimeClasspath, project.configurations.serverRuntimeClasspath] // Client-only deps + common deps + server deps for single-player
+
+    manifest {
+        attributes 'Main-Class': clientLauncherClass
+    }
+}
+
+// Build server jar
+tasks.register('serverShadowJar', ShadowJar) {
+    archiveClassifier.set('server')
+    from sourceSets.main.output // Include common code
+    from sourceSets.server.output // Include server-specific code
+    configurations = [project.configurations.serverRuntimeClasspath] // Server-only deps + common deps
+
+    manifest {
+        attributes 'Main-Class': serverLauncherClass
+    }
+}
+
+
+
+// -- RUNS -- //
+
+// Run client
+tasks.register('runClient', JavaExec) {
+    dependsOn clientShadowJar
+    group = "Execution"
+    description = "Runs the client application using the client shadow JAR"
+    mainClass = clientLauncherClass
+    classpath = files(tasks.clientShadowJar.outputs.files.singleFile)
+
+    // -- Command Line Arguments -- //
+    def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('clientRunDir')
+    args '--gamedir', gameDirArg
+
+    workingDir project.projectDir
+}
+
+// Run server
+tasks.register('runServer', JavaExec) {
+    dependsOn serverShadowJar
+    group = "Execution"
+    description = "Runs the server application using the server shadow JAR"
+    mainClass = serverLauncherClass
+    classpath = files(tasks.serverShadowJar.outputs.files.singleFile)
+
+    // -- Command Line Arguments -- //
+    def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('serverRunDir')
+    args '--gamedir', gameDirArg
+
+    workingDir project.projectDir
+}
+
+
+
+// -- JAR CONFIG FOR BUILDS -- //
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+shadowJar {
+    archiveBaseName.set("${project.name}")
+    archiveVersion.set("${project.version}")
+
+    archiveClassifier.set('')
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java'] // Shared code
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+    server {
+        java {
+            srcDirs = ['src/server/java']
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+        }
+        resources {
+            srcDirs = ['src/server/resources']
+        }
+    }
+    client {
+        java {
+            srcDirs = ['src/client/java']
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+
+            // We include the server side to be able to run single-player
+            compileClasspath += sourceSets.server.output
+            runtimeClasspath += sourceSets.server.output
+        }
+        resources {
+            srcDirs = ['src/client/resources', 'src/server/resources']
+        }
+    }
+}
