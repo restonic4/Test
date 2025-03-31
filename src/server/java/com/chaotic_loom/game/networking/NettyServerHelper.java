@@ -13,10 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class NettyServerHelper {
-
-
     public static Channel init() {
-        int port = 8080; // your chosen port
+        int port = 8080;
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 

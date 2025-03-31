@@ -3,6 +3,7 @@ package com.chaotic_loom.game.rendering;
 import java.util.List;
 import java.util.Map;
 
+import com.chaotic_loom.game.events.WindowEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joml.Vector3f;
@@ -43,14 +44,6 @@ public class Renderer {
     public void render(Window window, Camera camera, Map<Mesh, List<ClientGameObject>> objectsToRender) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (window.isResized()) {
-            glViewport(0, 0, window.getWidth(), window.getHeight());
-
-            // Update camera's aspect ratio which recalculates projection
-            camera.setAspectRatio((float)window.getWidth() / window.getHeight());
-            camera.recalculateProjectionMatrix();
-        }
-
         defaultShaderProgram.bind();
 
         // Upload camera matrices
@@ -64,39 +57,31 @@ public class Renderer {
 
             // Bind the VAO for this mesh
             glBindVertexArray(mesh.getVaoId());
-            // Assuming locations 0, 1, 2 were enabled during mesh creation
-            // If you manage attribute enabling/disabling per mesh:
-            // glEnableVertexAttribArray(0);
-            // if (mesh has tex coords) glEnableVertexAttribArray(1);
-            // if (mesh has normals) glEnableVertexAttribArray(2);
 
+            // VBOs / attributes
+            glEnableVertexAttribArray(Mesh.POSITION_VBO_ID);
+            glEnableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
+            glEnableVertexAttribArray(Mesh.NORMALS_VBO_ID);
 
             // Iterate through each object instance using this mesh
             for (ClientGameObject gameObject : batch) {
                 // Upload the model matrix for this specific object
                 defaultShaderProgram.setUniform("modelMatrix", gameObject.getModelMatrix());
 
-                // Set object-specific uniforms (e.g., color)
-                // For now, use a default color. Later, this could come from the GameObject.
+                // TODO: A system to apply uniforms properly, could it be an event array? (Could that be useful for us? for modders?)
                 defaultShaderProgram.setUniform("objectColor", defaultObjectColor);
 
-
-                // Issue the draw call
-                if (mesh.isIndexed()) {
-                    // Draw using indices (EBO)
-                    glDrawElements(GL_TRIANGLES, mesh.getVertexCount(), GL_UNSIGNED_INT, 0);
-                } else {
-                    // Draw using raw vertices (VBO only)
-                    glDrawArrays(GL_TRIANGLES, 0, mesh.getVertexCount());
-                }
+                // Draw call
+                glDrawElements(GL_TRIANGLES, mesh.getVertexCount(), GL_UNSIGNED_INT, 0);
             }
 
-            // Unbind VAO (optional if next loop iteration binds another one)
-            // Good practice if mixing with other rendering techniques
+            // Unbind VAO
             glBindVertexArray(0);
 
-            // Disable attributes if they were enabled here
-            // glDisableVertexAttribArray(0); ...
+            // Disable VBOs / attributes
+            glDisableVertexAttribArray(Mesh.POSITION_VBO_ID);
+            glDisableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
+            glDisableVertexAttribArray(Mesh.NORMALS_VBO_ID);
         }
 
         defaultShaderProgram.unbind();

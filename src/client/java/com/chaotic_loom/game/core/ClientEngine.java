@@ -3,6 +3,7 @@ package com.chaotic_loom.game.core;
 import com.chaotic_loom.game.components.ClientGameObject;
 import com.chaotic_loom.game.core.utils.ClientConstants;
 import com.chaotic_loom.game.core.utils.TempServer;
+import com.chaotic_loom.game.events.WindowEvents;
 import com.chaotic_loom.game.networking.ClientNetworkingContext;
 import com.chaotic_loom.game.rendering.*;
 import org.joml.Vector3f;
@@ -42,7 +43,7 @@ public class ClientEngine extends AbstractEngine {
         getArgsManager().throwIfMissing("uuid");
 
         window.init();
-        timer.init(); // ClientTimer init
+        timer.init();
         renderer.init(window);
         inputManager.init(window);
         camera.setPerspective(60.0f, (float) window.getWidth() / window.getHeight(), 0.1f, 1000.0f);
@@ -52,12 +53,18 @@ public class ClientEngine extends AbstractEngine {
         ClientGameObject cube1 = new ClientGameObject(cubeMesh);
         cube1.getTransform().setPosition(0, 0, -2);
         gameObjects.add(cube1);
-        ClientGameObject cube2 = new ClientGameObject(cubeMesh); // Add second cube back for animation testing
+        ClientGameObject cube2 = new ClientGameObject(cubeMesh);
         cube2.getTransform().setPosition(-1.5f, 0.5f, -3);
         cube2.getTransform().setScale(0.5f);
         gameObjects.add(cube2);
 
         TempServer.joinServer(this);
+
+        // Modify viewport on window modification
+        WindowEvents.RESIZE.register((window1, width, height) -> {
+            // Update camera's aspect ratio which recalculates projection
+            camera.setAspectRatio((float)window.getWidth() / window.getHeight());
+        });
 
         getLogger().info("Client Engine Initialized.");
     }
@@ -138,7 +145,10 @@ public class ClientEngine extends AbstractEngine {
             Mesh mesh = go.getMesh();
             if (mesh == null) continue;
 
-            objectsToRender.computeIfAbsent(mesh, k -> new ArrayList<>());
+            // computeIfAbsent = Looks if a list already exists for that mesh, if it does, it returns a list, if not, the lambda expression is executed.
+            // (I tend to forget this because me dumb, @restonic4)
+            List<ClientGameObject> batch = objectsToRender.computeIfAbsent(mesh, k -> new ArrayList<>());
+            batch.add(go);
         }
 
         renderer.render(window, camera, objectsToRender);

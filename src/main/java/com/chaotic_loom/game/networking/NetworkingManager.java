@@ -66,6 +66,10 @@ public class NetworkingManager {
     public void cleanup() {
         logger.info("Cleaning networking manager");
 
+        if (this.channel == null) {
+            return;
+        }
+
         this.channel.close();
         this.channel = null;
     }

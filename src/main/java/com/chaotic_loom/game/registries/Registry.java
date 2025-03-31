@@ -25,7 +25,6 @@ public class Registry {
     public static final Logger logger = LogManager.getLogger("Registry");
     private static final Map<RegistryKey<?>, Map<Identifier, ?>> registries = new HashMap<>();
 
-    @SuppressWarnings("unchecked")
     public static <T extends RegistryObject> T register(RegistryKey<T> registryKey, Identifier identifier, T object) {
         Map<Identifier, T> registry = getOrCreateRegistrySet(registryKey);
 
@@ -126,7 +125,7 @@ public class Registry {
                 } catch (NoSuchMethodException e) {
                     logger.error("No 'register' method found in: {}", registrar.getSimpleName());
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
+                    logger.error(e);
                 }
             }
         }

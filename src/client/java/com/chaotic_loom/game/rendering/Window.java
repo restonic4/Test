@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering;
 
+import com.chaotic_loom.game.events.WindowEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.glfw.*;
@@ -21,14 +22,12 @@ public class Window {
     private final String title;
     private int width;
     private int height;
-    private boolean resized;
     private boolean vsync = true;
 
     public Window(String title, int width, int height) {
         this.title = title;
         this.width = width;
         this.height = height;
-        this.resized = false;
     }
 
     public void init() {
@@ -60,14 +59,10 @@ public class Window {
         glfwSetFramebufferSizeCallback(windowHandle, (window, w, h) -> {
             this.width = w;
             this.height = h;
-            this.resized = true;
 
             glViewport(0, 0, w, h);
-        });
 
-        // Set up a key callback. It will be called every time a key is pressed, repeated or released.
-        glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
-            // TODO: Implement a keybindings system to let the used change its keys, allow key combinations as well, the system should be easy to use, it should have an API so we can check if the user did a simple use, if its holding for long and other posibilities.
+            WindowEvents.RESIZE.invoker().onEvent(this, w, h);
         });
 
         // Get the thread stack and push a new frame
@@ -120,7 +115,6 @@ public class Window {
     public void update() {
         glfwSwapBuffers(windowHandle); // swap the color buffers
         glfwPollEvents(); // Poll for window events. The key callback will only be invoked during this call.
-        resized = false; // Reset resized flag after polling
     }
 
     public void cleanup() {
@@ -144,10 +138,6 @@ public class Window {
 
     public void setClearColor(float r, float g, float b, float a) {
         glClearColor(r, g, b, a);
-    }
-
-    public boolean isResized() {
-        return resized;
     }
 
     public int getWidth() {
