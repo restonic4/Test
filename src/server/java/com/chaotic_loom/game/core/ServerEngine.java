@@ -22,8 +22,6 @@ public class ServerEngine extends AbstractEngine {
         getNetworkingManager().setChannel(serverChannel);
 
         getLogger().info("Server Engine Initialized.");
-
-        Packets.LOGIN.send();
     }
 
     @Override

@@ -5,6 +5,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.concurrent.TimeUnit;
@@ -21,6 +22,12 @@ public class NettyServerHelper {
         AtomicBoolean failed = new AtomicBoolean(false);
         AtomicReference<Exception> exception = new AtomicReference<>();
 
+        int maxFrameLength = 2048; // maximum length of a packet
+        int lengthFieldOffset = 0; // length field starts at index 0
+        int lengthFieldLength = 4; // length is a 4-byte int
+        int lengthAdjustment = 0;  // no adjustment, if the length field only contains the payload length
+        int initialBytesToStrip = 4; // strip the length field from the output
+
         new Thread(() -> {
             try {
                 ServerBootstrap bootstrap = new ServerBootstrap();
@@ -32,12 +39,10 @@ public class NettyServerHelper {
                                 ChannelPipeline pipeline = ch.pipeline();
 
                                 // IdleStateHandler: triggers events if no read within 60 sec or no write within 30 sec
-                                pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
+                                //pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
 
-                                pipeline.addLast(new ServerLoginHandler());
-
-                                // Add your Packet encoder/decoder (to transform ByteBuf into Packet instances)
-                                pipeline.addLast(new PacketDecoder());
+                                pipeline.addLast(new LengthFieldBasedFrameDecoder(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip));
+                                pipeline.addLast(new ServerPacketChannelHandler());
                             }
                         });
 

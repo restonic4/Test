@@ -5,13 +5,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class PacketBuffer {
-    private final ByteBuf buffer;
+    private ByteBuf buffer;
 
-    public PacketBuffer(Packet packet) {
+    public PacketBuffer(Identifier identifier) {
         this.buffer = Unpooled.buffer();
-        writeIdentifier(packet.getIdentifier());
+        this.writeIdentifier(identifier);
     }
 
     public PacketBuffer(ByteBuf buffer) {
@@ -48,5 +50,12 @@ public class PacketBuffer {
     public Identifier readIdentifier() {
         String rawIdentifier = readString();
         return new Identifier(rawIdentifier);
+    }
+
+    @Override
+    public String toString() {
+        return "PacketBuffer{" +
+                "buffer=" + buffer +
+                '}';
     }
 }

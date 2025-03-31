@@ -1,7 +1,9 @@
 package com.chaotic_loom.game.core;
 
 import com.chaotic_loom.game.components.ClientGameObject;
+import com.chaotic_loom.game.registries.built_in.Packets;
 import com.chaotic_loom.game.rendering.*;
+import io.netty.buffer.Unpooled;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -100,7 +102,7 @@ public class ClientEngine extends AbstractEngine {
         if (inputManager.isKeyPressed(GLFW_KEY_SPACE)) deltaPos.add(worldUp); // Move along world Y
         if (inputManager.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) deltaPos.sub(worldUp); // Move along world Y
         if (inputManager.isKeyPressed(GLFW_KEY_X)) inputManager.setCursorDisabled(!inputManager.isCursorDisabled(), window);
-        if (inputManager.isKeyPressed(GLFW_KEY_P)) throw new RuntimeException("You clicked the key P, haha");
+        if (inputManager.isKeyPressed(GLFW_KEY_P)) Packets.LOGIN.send();
 
         // Normalize delta if moving diagonally to prevent faster speed
         if (deltaPos.lengthSquared() > 0) {

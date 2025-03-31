@@ -1,7 +1,6 @@
 package com.chaotic_loom.game.core;
 
-import com.chaotic_loom.game.networking.ClientLoginHandler;
-import com.chaotic_loom.game.networking.PacketDecoder;
+import com.chaotic_loom.game.networking.ClientPacketChannelHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -10,6 +9,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.concurrent.TimeUnit;
@@ -21,6 +21,12 @@ public class TempServer {
             int port = 8080;
             EventLoopGroup group = new NioEventLoopGroup();
 
+            int maxFrameLength = 2048; // maximum length of a packet
+            int lengthFieldOffset = 0; // length field starts at index 0
+            int lengthFieldLength = 4; // length is a 4-byte int
+            int lengthAdjustment = 0;  // no adjustment, if the length field only contains the payload length
+            int initialBytesToStrip = 4; // strip the length field from the output
+
             try {
                 Bootstrap bootstrap = new Bootstrap();
                 bootstrap.group(group)
@@ -31,12 +37,10 @@ public class TempServer {
                                 ChannelPipeline pipeline = ch.pipeline();
 
                                 // Optionally, add an IdleStateHandler to detect connection issues
-                                pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
+                                //pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
 
-                                pipeline.addLast(new ClientLoginHandler());
-
-                                // Add your custom packet decoder and encoder
-                                pipeline.addLast(new PacketDecoder());
+                                pipeline.addLast(new LengthFieldBasedFrameDecoder(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip));
+                                pipeline.addLast(new ClientPacketChannelHandler());
                             }
                         });
 
