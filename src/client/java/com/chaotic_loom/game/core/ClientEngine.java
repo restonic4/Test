@@ -133,12 +133,12 @@ public class ClientEngine extends AbstractEngine {
     private void render() {
         objectsToRender.clear();
 
+        // We create batches of the same mesh. This groups all the GameObjects using the same mesh on a batch. 1 batch = 1 draw call.
         for (ClientGameObject go : gameObjects) { // Using TEMP list
             Mesh mesh = go.getMesh();
             if (mesh == null) continue;
 
-            List<ClientGameObject> batch = objectsToRender.computeIfAbsent(mesh, k -> new ArrayList<>());
-            batch.add(go);
+            objectsToRender.computeIfAbsent(mesh, k -> new ArrayList<>());
         }
 
         renderer.render(window, camera, objectsToRender);
@@ -146,15 +146,14 @@ public class ClientEngine extends AbstractEngine {
 
     private void sync() {
         float loopSlot = 1f / ClientConstants.TARGET_FPS;
-        // Note: getLastLoopTime might not be implemented in ClientTimer if not needed
-        // double endTime = timer.getLastLoopTime() + loopSlot; // Requires timer modification
-        // A simpler sync: sleep until target frame time is reached
         double targetTime = lastSyncTime + loopSlot;
+
         while (timer.getTime() < targetTime - 0.001) { // Sleep until slightly before target
             try { Thread.sleep(1); } catch (InterruptedException ignore) {Thread.currentThread().interrupt(); break;}
         }
-        // Busy wait for the last moment for higher precision (optional, uses CPU)
+        // Busy wait for the last moment for higher precision
         // while (timer.getTime() < targetTime) { Thread.yield(); }
+
         lastSyncTime = timer.getTime(); // Track when sync finished
     }
     private double lastSyncTime = 0;

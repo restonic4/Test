@@ -41,13 +41,13 @@ public class Camera {
     }
 
     // --- Matrix Recalculation ---
-    private void recalculateViewMatrix() {
+    public void recalculateViewMatrix() {
         // State is assumed to be valid (normalized, orthogonal) due to calls in setters/modifiers
         Vector3f target = tempVec.set(position).add(direction);
         viewMatrix.identity().lookAt(position, target, up);
     }
 
-    private void recalculateProjectionMatrix() {
+    public void recalculateProjectionMatrix() {
         if (aspectRatio <= 0) aspectRatio = 1.0f; // Avoid division by zero
         projectionMatrix.identity().perspective(fovRadians, aspectRatio, zNear, zFar);
     }

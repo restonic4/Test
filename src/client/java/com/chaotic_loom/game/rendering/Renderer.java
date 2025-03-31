@@ -17,8 +17,7 @@ public class Renderer {
     private final Logger logger = LogManager.getLogger("Renderer");
 
     private ShaderProgram defaultShaderProgram;
-    // You might have multiple shader programs later
-    private final Vector3f defaultObjectColor = new Vector3f(1.0f, 0.5f, 0.2f); // Default orange color
+    private final Vector3f defaultObjectColor = new Vector3f(1.0f, 0.5f, 0.2f);
 
     public void init(Window window) throws Exception {
         // Load, compile, link shaders
@@ -27,11 +26,11 @@ public class Renderer {
         defaultShaderProgram.createFragmentShader(ShaderProgram.loadShaderResource("/shaders/default.frag"));
         defaultShaderProgram.link();
 
-        // Create uniforms (must match names in shader files)
+        // Create uniforms
         defaultShaderProgram.createUniform("projectionMatrix");
         defaultShaderProgram.createUniform("viewMatrix");
         defaultShaderProgram.createUniform("modelMatrix");
-        defaultShaderProgram.createUniform("objectColor"); // For the simple fragment shader
+        defaultShaderProgram.createUniform("objectColor");
 
         // Enable Depth Testing (Important for 3D)
         glEnable(GL_DEPTH_TEST);
@@ -39,22 +38,6 @@ public class Renderer {
         // Enable backface culling
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-
-        // Set initial projection matrix based on window size
-        updateProjectionMatrix(window);
-    }
-
-    public void updateProjectionMatrix(Window window) {
-        if (defaultShaderProgram != null) {
-            float aspectRatio = (float) window.getWidth() / window.getHeight();
-            // Assuming Camera manages its own projection, we just upload it
-            // Alternatively, calculate here:
-            // Matrix4f projectionMatrix = new Matrix4f().perspective((float) Math.toRadians(60.0f), aspectRatio, 0.1f, 1000.f);
-            // defaultShaderProgram.bind();
-            // defaultShaderProgram.setUniform("projectionMatrix", projectionMatrix);
-            // defaultShaderProgram.unbind();
-        }
-        // Better: Let the camera handle this and just query it during render
     }
 
     public void render(Window window, Camera camera, Map<Mesh, List<ClientGameObject>> objectsToRender) {
@@ -62,13 +45,15 @@ public class Renderer {
 
         if (window.isResized()) {
             glViewport(0, 0, window.getWidth(), window.getHeight());
+
             // Update camera's aspect ratio which recalculates projection
             camera.setAspectRatio((float)window.getWidth() / window.getHeight());
+            camera.recalculateProjectionMatrix();
         }
 
         defaultShaderProgram.bind();
 
-        // Upload camera matrices (once per frame)
+        // Upload camera matrices
         defaultShaderProgram.setUniform("projectionMatrix", camera.getProjectionMatrix());
         defaultShaderProgram.setUniform("viewMatrix", camera.getViewMatrix());
 
