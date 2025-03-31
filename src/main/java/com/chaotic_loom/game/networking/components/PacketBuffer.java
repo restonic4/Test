@@ -8,6 +8,7 @@ import io.netty.channel.Channel;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.UUID;
 
 public class PacketBuffer {
     private ByteBuf buffer;
@@ -52,6 +53,38 @@ public class PacketBuffer {
         String rawIdentifier = readString();
         return new Identifier(rawIdentifier);
     }
+
+    public void writeUUID(UUID uuid) {
+        if (uuid == null) {
+            this.buffer.writeBoolean(false); // Mark as not present
+        } else {
+            this.buffer.writeBoolean(true); // Mark as present
+            this.buffer.writeLong(uuid.getMostSignificantBits());
+            this.buffer.writeLong(uuid.getLeastSignificantBits());
+        }
+    }
+
+    public UUID readUUID() {
+        boolean present = this.buffer.readBoolean();
+        if (!present) {
+            return null; // Was marked as not present
+        } else {
+            long msb = this.buffer.readLong();
+            long lsb = this.buffer.readLong();
+            return new UUID(msb, lsb);
+        }
+    }
+
+    public void writeUser(User user) {
+        this.writeUUID(user.uuid());
+        this.writeString(user.username());
+    }
+
+    public User readUser() {
+        return new User(this.readUUID(), this.readString());
+    }
+
+    // Other
 
     public ByteBuf getFinalBuffer(Channel channel) {
         int dataLength = this.buffer.readableBytes();

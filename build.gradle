@@ -107,7 +107,8 @@ tasks.register('runClient', JavaExec) {
     def gameDirArg = project.projectDir.absolutePath + '/' + project.findProperty('clientRunDir')
     args(
             '--gamedir', gameDirArg,
-            '--username', project.findProperty('runUsername')
+            '--username', project.findProperty('runUsername'),
+            '--uuid', project.findProperty('runUUID')
     )
 
     // -- Run dir -- //

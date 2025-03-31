@@ -1,9 +1,10 @@
 package com.chaotic_loom.game.core;
 
 import com.chaotic_loom.game.components.ClientGameObject;
-import com.chaotic_loom.game.registries.built_in.Packets;
+import com.chaotic_loom.game.core.utils.ClientConstants;
+import com.chaotic_loom.game.core.utils.TempServer;
+import com.chaotic_loom.game.networking.ClientNetworkingContext;
 import com.chaotic_loom.game.rendering.*;
-import io.netty.buffer.Unpooled;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -15,6 +16,7 @@ public class ClientEngine extends AbstractEngine {
     private final Renderer renderer;
     private final Camera camera;
     private final InputManager inputManager;
+    private final ClientNetworkingContext clientNetworkingContext;
     private final ClientTimer timer;
 
     private final List<ClientGameObject> gameObjects; // TEMP state
@@ -27,6 +29,7 @@ public class ClientEngine extends AbstractEngine {
         this.renderer = new Renderer();
         this.camera = new Camera();
         this.inputManager = new InputManager();
+        this.clientNetworkingContext = new ClientNetworkingContext();
         this.timer = new ClientTimer();
         this.gameObjects = new ArrayList<>(); // TEMP state
         this.objectsToRender = new HashMap<>(); // TEMP state
@@ -34,7 +37,9 @@ public class ClientEngine extends AbstractEngine {
 
     @Override
     protected void init() throws Exception {
+        // TODO: Should not be a throw, single-player should be a thing
         getArgsManager().throwIfMissing("username");
+        getArgsManager().throwIfMissing("uuid");
 
         window.init();
         timer.init(); // ClientTimer init
@@ -102,7 +107,6 @@ public class ClientEngine extends AbstractEngine {
         if (inputManager.isKeyPressed(GLFW_KEY_SPACE)) deltaPos.add(worldUp); // Move along world Y
         if (inputManager.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) deltaPos.sub(worldUp); // Move along world Y
         if (inputManager.isKeyPressed(GLFW_KEY_X)) inputManager.setCursorDisabled(!inputManager.isCursorDisabled(), window);
-        if (inputManager.isKeyPressed(GLFW_KEY_P)) Packets.LOGIN.send();
 
         // Normalize delta if moving diagonally to prevent faster speed
         if (deltaPos.lengthSquared() > 0) {
@@ -178,5 +182,9 @@ public class ClientEngine extends AbstractEngine {
     @Override
     protected Timer getTimer() {
         return this.timer;
+    }
+
+    public ClientNetworkingContext getClientNetworkingContext() {
+        return clientNetworkingContext;
     }
 }

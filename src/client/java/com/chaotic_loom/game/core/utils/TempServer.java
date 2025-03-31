@@ -1,7 +1,9 @@
-package com.chaotic_loom.game.core;
+package com.chaotic_loom.game.core.utils;
 
+import com.chaotic_loom.game.core.ClientEngine;
 import com.chaotic_loom.game.networking.ClientPacketChannelHandler;
 import com.chaotic_loom.game.networking.NetworkingManager;
+import com.chaotic_loom.game.networking.components.User;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -13,10 +15,16 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class TempServer {
     public static void joinServer(ClientEngine engine) {
+        engine.getClientNetworkingContext().setUser(new User(
+                UUID.fromString(engine.getArgsManager().getValue("uuid")),
+                engine.getArgsManager().getValue("username")
+        ));
+
         new Thread(() -> {
             String host = "localhost";
             int port = 8080;
