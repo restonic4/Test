@@ -29,6 +29,8 @@ public class Registry {
     public static <T extends RegistryObject> T register(RegistryKey<T> registryKey, Identifier identifier, T object) {
         Map<Identifier, T> registry = getOrCreateRegistrySet(registryKey);
 
+        logger.debug("Registering {} on {}!", identifier, registryKey.key());
+
         if (registry.containsKey(identifier)) {
             throw new IllegalArgumentException("Duplicate identifier: " + identifier);
         }
@@ -43,9 +45,8 @@ public class Registry {
         return object;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends RegistryObject> T getRegistryObject(Identifier identifier) {
-        Map<Identifier, T> registry = getRegistrySet((RegistryKey<T>) identifier.getRegistryKey());
+    public static <T extends RegistryObject> T getRegistryObject(RegistryKey<T> registryKey, Identifier identifier) {
+        Map<Identifier, T> registry = getRegistrySet(registryKey);
 
         if (registry == null) return null;
 

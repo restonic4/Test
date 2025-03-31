@@ -158,8 +158,9 @@ public class ClientEngine extends AbstractEngine {
 
     @Override
     protected void cleanup() {
-        getLogger().info("Client Engine Cleaned Up.");
+        getLogger().info("Cleaning up client engine...");
 
+        getNetworkingManager().cleanup();
         renderer.cleanup();
 
         // Mesh cleanup (needs proper management)

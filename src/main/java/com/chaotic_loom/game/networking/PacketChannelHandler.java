@@ -13,8 +13,6 @@ public abstract class PacketChannelHandler extends ChannelInboundHandlerAdapter 
         ByteBuf in = (ByteBuf) msg;
         PacketBuffer packetBuffer = new PacketBuffer(in);
 
-        System.out.println("Received something");
-
         AbstractLauncher.getEngine().getNetworkingManager().onPacketReceived(ctx, packetBuffer);
     }
 

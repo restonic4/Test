@@ -104,8 +104,9 @@ public class ServerEngine extends AbstractEngine {
     @Override
     protected void cleanup() {
         getLogger().info("Cleaning up server engine...");
-        // networkManager.shutdown();
-        // worldManager.saveState();
+
+        getNetworkingManager().cleanup();
+
         getLogger().info("Server Engine Cleaned Up.");
     }
 

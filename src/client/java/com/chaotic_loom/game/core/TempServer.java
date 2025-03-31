@@ -1,6 +1,7 @@
 package com.chaotic_loom.game.core;
 
 import com.chaotic_loom.game.networking.ClientPacketChannelHandler;
+import com.chaotic_loom.game.networking.NetworkingManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -21,12 +22,6 @@ public class TempServer {
             int port = 8080;
             EventLoopGroup group = new NioEventLoopGroup();
 
-            int maxFrameLength = 2048; // maximum length of a packet
-            int lengthFieldOffset = 0; // length field starts at index 0
-            int lengthFieldLength = 4; // length is a 4-byte int
-            int lengthAdjustment = 0;  // no adjustment, if the length field only contains the payload length
-            int initialBytesToStrip = 4; // strip the length field from the output
-
             try {
                 Bootstrap bootstrap = new Bootstrap();
                 bootstrap.group(group)
@@ -36,10 +31,8 @@ public class TempServer {
                             protected void initChannel(SocketChannel ch) throws Exception {
                                 ChannelPipeline pipeline = ch.pipeline();
 
-                                // Optionally, add an IdleStateHandler to detect connection issues
-                                //pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
-
-                                pipeline.addLast(new LengthFieldBasedFrameDecoder(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip));
+                                pipeline.addLast(new IdleStateHandler(NetworkingManager.READER_IDLE_TIMEOUT_SECONDS, 0, 0, TimeUnit.SECONDS));
+                                pipeline.addLast(new LengthFieldBasedFrameDecoder(NetworkingManager.MAX_FRAME_LENGTH, NetworkingManager.LENGTH_FIELD_OFFSET, NetworkingManager.LENGTH_FIELD_LENGTH, NetworkingManager.LENGTH_ADJUSTMENT, NetworkingManager.INITIAL_BYTES_TO_STRIP));
                                 pipeline.addLast(new ClientPacketChannelHandler());
                             }
                         });

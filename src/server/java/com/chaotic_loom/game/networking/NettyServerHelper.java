@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class NettyServerHelper {
+
+
     public static Channel init() {
         int port = 8080; // your chosen port
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -21,12 +23,6 @@ public class NettyServerHelper {
         AtomicReference<Channel> channel = new AtomicReference<>();
         AtomicBoolean failed = new AtomicBoolean(false);
         AtomicReference<Exception> exception = new AtomicReference<>();
-
-        int maxFrameLength = 2048; // maximum length of a packet
-        int lengthFieldOffset = 0; // length field starts at index 0
-        int lengthFieldLength = 4; // length is a 4-byte int
-        int lengthAdjustment = 0;  // no adjustment, if the length field only contains the payload length
-        int initialBytesToStrip = 4; // strip the length field from the output
 
         new Thread(() -> {
             try {
@@ -38,10 +34,8 @@ public class NettyServerHelper {
                             protected void initChannel(SocketChannel ch) throws Exception {
                                 ChannelPipeline pipeline = ch.pipeline();
 
-                                // IdleStateHandler: triggers events if no read within 60 sec or no write within 30 sec
-                                //pipeline.addLast(new IdleStateHandler(60, 30, 0, TimeUnit.SECONDS));
-
-                                pipeline.addLast(new LengthFieldBasedFrameDecoder(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip));
+                                pipeline.addLast(new IdleStateHandler(NetworkingManager.READER_IDLE_TIMEOUT_SECONDS, 0, 0, TimeUnit.SECONDS));
+                                pipeline.addLast(new LengthFieldBasedFrameDecoder(NetworkingManager.MAX_FRAME_LENGTH, NetworkingManager.LENGTH_FIELD_OFFSET, NetworkingManager.LENGTH_FIELD_LENGTH, NetworkingManager.LENGTH_ADJUSTMENT, NetworkingManager.INITIAL_BYTES_TO_STRIP));
                                 pipeline.addLast(new ServerPacketChannelHandler());
                             }
                         });

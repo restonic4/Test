@@ -22,8 +22,6 @@ public class LoginPacket extends Packet {
 
         packetBuffer.writeString("hi hello packet");
 
-        System.out.println(packetBuffer);
-
         sendToChannel(packetBuffer);
     }
 }

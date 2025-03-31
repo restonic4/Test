@@ -3,6 +3,7 @@ package com.chaotic_loom.game.networking.components;
 import com.chaotic_loom.game.registries.components.Identifier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -50,6 +51,16 @@ public class PacketBuffer {
     public Identifier readIdentifier() {
         String rawIdentifier = readString();
         return new Identifier(rawIdentifier);
+    }
+
+    public ByteBuf getFinalBuffer(Channel channel) {
+        int dataLength = this.buffer.readableBytes();
+        ByteBuf finalBuffer = channel.alloc().buffer(4 + dataLength);
+
+        finalBuffer.writeInt(dataLength);
+        finalBuffer.writeBytes(this.buffer);
+
+        return finalBuffer;
     }
 
     @Override
