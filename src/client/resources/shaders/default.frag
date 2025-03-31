@@ -1,16 +1,15 @@
 #version 330 core
 
 // Inputs from the vertex shader
-// in vec2 outTexCoord;
-// in vec3 outNormal; // If needed
+in vec2 outTexCoord;
+in vec3 outNormal;
 
 // Uniforms
 uniform vec3 objectColor; // Example uniform for a solid color
+uniform sampler2D texture_sampler;
 
 // Output color for the fragment
 out vec4 FragColor;
-
-// uniform sampler2D texture_sampler; // If using textures
 
 void main()
 {
