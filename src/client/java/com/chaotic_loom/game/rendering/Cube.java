@@ -52,10 +52,38 @@ public class Cube {
             20, 21, 22, 20, 22, 23
     };
 
-    // TODO: Add Texture Coordinates and Normals if needed
+    private static final float[] NORMALS = {
+            // Front (+Z)
+            0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1,
+            // Back (-Z)
+            0, 0,-1,   0, 0,-1,   0, 0,-1,   0, 0,-1,
+            // Top (+Y)
+            0, 1, 0,   0, 1, 0,   0, 1, 0,   0, 1, 0,
+            // Bottom (-Y)
+            0,-1, 0,   0,-1, 0,   0,-1, 0,   0,-1, 0,
+            // Right (+X)
+            1, 0, 0,   1, 0, 0,   1, 0, 0,   1, 0, 0,
+            // Left (-X)
+            -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0
+    };
+
+    private static final float[] BASE_UVS = {
+            // Front Face
+            0, 0,   1, 0,   1, 1,   0, 1,
+            // Back Face
+            0, 0,   1, 0,   1, 1,   0, 1, // May need flipping depending on modeler/texture
+            // Top Face
+            0, 0,   1, 0,   1, 1,   0, 1,
+            // Bottom Face
+            0, 0,   1, 0,   1, 1,   0, 1,
+            // Right Face
+            0, 0,   1, 0,   1, 1,   0, 1,
+            // Left Face
+            0, 0,   1, 0,   1, 1,   0, 1,
+    };
 
     public static Mesh createMesh() {
         // Currently only positions and indices
-        return new Mesh(POSITIONS, null, null, INDICES);
+        return new Mesh(POSITIONS, BASE_UVS, NORMALS, INDICES);
     }
 }

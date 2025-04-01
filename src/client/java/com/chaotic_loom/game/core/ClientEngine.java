@@ -6,6 +6,7 @@ import com.chaotic_loom.game.core.utils.TempServer;
 import com.chaotic_loom.game.events.WindowEvents;
 import com.chaotic_loom.game.networking.ClientNetworkingContext;
 import com.chaotic_loom.game.rendering.*;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -21,7 +22,8 @@ public class ClientEngine extends AbstractEngine {
     private final ClientTimer timer;
 
     private final List<ClientGameObject> gameObjects; // TEMP state
-    private final Map<Mesh, List<ClientGameObject>> objectsToRender; // TEMP state
+    private final Map<Texture, Map<Mesh, List<Matrix4f>>> atlasRenderBatch;
+    Map<RenderBatchKey, List<InstanceData>> renderBatch;
 
     public ClientEngine() {
         super(Environment.CLIENT);
@@ -33,7 +35,8 @@ public class ClientEngine extends AbstractEngine {
         this.clientNetworkingContext = new ClientNetworkingContext();
         this.timer = new ClientTimer();
         this.gameObjects = new ArrayList<>(); // TEMP state
-        this.objectsToRender = new HashMap<>(); // TEMP state
+        this.atlasRenderBatch = new HashMap<>();
+        this.renderBatch = new HashMap<>();
     }
 
     @Override
@@ -43,6 +46,7 @@ public class ClientEngine extends AbstractEngine {
         getArgsManager().throwIfMissing("uuid");
 
         window.init();
+        TextureManager.getInstance().bakeAtlases("textures");
         timer.init();
         renderer.init(window);
         inputManager.init(window);
@@ -50,10 +54,10 @@ public class ClientEngine extends AbstractEngine {
 
         // Create sample geometry (TEMP)
         Mesh cubeMesh = Cube.createMesh();
-        ClientGameObject cube1 = new ClientGameObject(cubeMesh);
+        ClientGameObject cube1 = new ClientGameObject(cubeMesh, "/textures/block/stone.png");
         cube1.getTransform().setPosition(0, 0, -2);
         gameObjects.add(cube1);
-        ClientGameObject cube2 = new ClientGameObject(cubeMesh);
+        ClientGameObject cube2 = new ClientGameObject(cubeMesh, "/textures/block/acacia_log.png");
         cube2.getTransform().setPosition(-1.5f, 0.5f, -3);
         cube2.getTransform().setScale(0.5f);
         gameObjects.add(cube2);
@@ -138,20 +142,59 @@ public class ClientEngine extends AbstractEngine {
     }
 
     private void render() {
-        objectsToRender.clear();
+        TextureManager texManager = TextureManager.getInstance();
 
-        // We create batches of the same mesh. This groups all the GameObjects using the same mesh on a batch. 1 batch = 1 draw call.
-        for (ClientGameObject go : gameObjects) { // Using TEMP list
+        renderBatch.clear();
+
+        // Prepare batch
+        for (ClientGameObject go : gameObjects) {
             Mesh mesh = go.getMesh();
-            if (mesh == null) continue;
+            TextureAtlasInfo atlasInfo = go.getAtlasInfo();
 
-            // computeIfAbsent = Looks if a list already exists for that mesh, if it does, it returns a list, if not, the lambda expression is executed.
-            // (I tend to forget this because me dumb, @restonic4)
-            List<ClientGameObject> batch = objectsToRender.computeIfAbsent(mesh, k -> new ArrayList<>());
-            batch.add(go);
+            if (mesh == null || atlasInfo == null || atlasInfo.atlasTexture == null) {
+                if (atlasInfo == null) getLogger().warn("GameObject missing AtlasInfo, skipping render for GO.");
+                continue;
+            }
+
+            Texture atlasTexture = atlasInfo.atlasTexture;
+
+            // Create the key for this batch
+            RenderBatchKey key = new RenderBatchKey(atlasTexture, mesh);
+            InstanceData instance = new InstanceData(go.getModelMatrix(), atlasInfo);
+
+            // Add instance to the list associated with the key
+            List<InstanceData> batchList = renderBatch.computeIfAbsent(key, k -> new ArrayList<>());
+            batchList.add(instance);
         }
 
-        renderer.render(window, camera, objectsToRender);
+        renderer.render(window, camera, renderBatch);
+
+        // Prepare batch
+        /*for (ClientGameObject go : gameObjects) {
+            Mesh mesh = go.getMesh();
+            String texturePath = go.getTexturePath();
+
+            if (mesh == null || texturePath == null) continue;
+
+            // Look up the atlas info for this object's texture
+            TextureAtlasInfo atlasInfo = texManager.getTextureInfo(texturePath);
+
+            if (atlasInfo == null || atlasInfo.atlasTexture == null) {
+                getLogger().warn("Atlas info not found for texture: {}", texturePath);
+                continue;
+            }
+
+            Texture atlasTexture = atlasInfo.atlasTexture; // The specific atlas texture GPU object
+
+            // --- Populate the Atlas-Grouped Batch ---
+            Map<Mesh, List<Matrix4f>> meshBatch = atlasRenderBatch.computeIfAbsent(atlasTexture, k -> new HashMap<>());
+            List<Matrix4f> instances = meshBatch.computeIfAbsent(mesh, k -> new ArrayList<>());
+
+            // Add the model matrix for this instance
+            instances.add(go.getModelMatrix());
+        }
+
+        renderer.render(window, camera, atlasRenderBatch);*/
     }
 
     private void sync() {
@@ -175,6 +218,8 @@ public class ClientEngine extends AbstractEngine {
 
         getNetworkingManager().cleanup();
         renderer.cleanup();
+
+        TextureManager.getInstance().cleanup();
 
         // Mesh cleanup (needs proper management)
         Set<Mesh> uniqueMeshes = new HashSet<>();

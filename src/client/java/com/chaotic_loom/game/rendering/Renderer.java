@@ -6,6 +6,7 @@ import java.util.Map;
 import com.chaotic_loom.game.events.WindowEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import com.chaotic_loom.game.components.ClientGameObject;
@@ -31,7 +32,12 @@ public class Renderer {
         defaultShaderProgram.createUniform("projectionMatrix");
         defaultShaderProgram.createUniform("viewMatrix");
         defaultShaderProgram.createUniform("modelMatrix");
-        defaultShaderProgram.createUniform("objectColor");
+        defaultShaderProgram.createUniform("tintColor");
+        defaultShaderProgram.createUniform("textureSampler");
+
+        // Atlas UVs
+        defaultShaderProgram.createUniform("uvOffset");
+        defaultShaderProgram.createUniform("uvScale");
 
         // Enable Depth Testing (Important for 3D)
         glEnable(GL_DEPTH_TEST);
@@ -41,7 +47,7 @@ public class Renderer {
         glCullFace(GL_BACK);
     }
 
-    public void render(Window window, Camera camera, Map<Mesh, List<ClientGameObject>> objectsToRender) {
+    public void render(Window window, Camera camera, Map<Texture, Map<Mesh, List<Matrix4f>>> atlasRenderBatch) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         defaultShaderProgram.bind();
@@ -50,8 +56,50 @@ public class Renderer {
         defaultShaderProgram.setUniform("projectionMatrix", camera.getProjectionMatrix());
         defaultShaderProgram.setUniform("viewMatrix", camera.getViewMatrix());
 
+        // Iterate through each Atlas Texture used in the batch
+        for (Map.Entry<Texture, Map<Mesh, List<Matrix4f>>> atlasEntry : atlasRenderBatch.entrySet()) {
+            Texture atlasTexture = atlasEntry.getKey();
+            Map<Mesh, List<Matrix4f>> meshBatch = atlasEntry.getValue();
+
+            // --- Bind the specific Atlas Texture for this group ---
+            atlasTexture.bind(0); // Bind to texture unit 0
+
+            boolean vaoBound = false;
+
+            // --- Iterate through Meshes using this Atlas ---
+            for (Map.Entry<Mesh, List<Matrix4f>> meshEntry : meshBatch.entrySet()) {
+                Mesh mesh = meshEntry.getKey();
+                List<Matrix4f> transforms = meshEntry.getValue();
+
+                // Bind the VAO for this mesh
+                glBindVertexArray(mesh.getVaoId());
+
+                // --- Iterate through instances (Transforms) using this Mesh & Atlas ---
+                for (Matrix4f modelMatrix : transforms) {
+                    // Upload the specific model matrix
+                    defaultShaderProgram.setUniform("modelMatrix", modelMatrix);
+                    defaultShaderProgram.setUniform("tintColor", defaultObjectColor);
+
+                    // Draw the object instance
+                    glDrawElements(GL_TRIANGLES, mesh.getVertexCount(), GL_UNSIGNED_INT, 0);
+                }
+                // Note: GPU Instancing optimization could go here later
+            }
+        } // End loop through atlases
+
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0); // Ensure unit 0 is active before unbinding
+        glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
+
+        // Disable attributes
+        glDisableVertexAttribArray(Mesh.POSITION_VBO_ID);
+        glDisableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
+        glDisableVertexAttribArray(Mesh.NORMALS_VBO_ID);
+
+        defaultShaderProgram.unbind();
+
         // Iterate through each mesh type
-        for (Map.Entry<Mesh, List<ClientGameObject>> entry : objectsToRender.entrySet()) {
+        /*for (Map.Entry<Mesh, List<ClientGameObject>> entry : objectsToRender.entrySet()) {
             Mesh mesh = entry.getKey();
             List<ClientGameObject> batch = entry.getValue();
 
@@ -69,7 +117,7 @@ public class Renderer {
                 defaultShaderProgram.setUniform("modelMatrix", gameObject.getModelMatrix());
 
                 // TODO: A system to apply uniforms properly, could it be an event array? (Could that be useful for us? for modders?)
-                defaultShaderProgram.setUniform("objectColor", defaultObjectColor);
+                defaultShaderProgram.setUniform("tintColor", defaultObjectColor);
 
                 // Draw call
                 glDrawElements(GL_TRIANGLES, mesh.getVertexCount(), GL_UNSIGNED_INT, 0);
@@ -84,7 +132,7 @@ public class Renderer {
             glDisableVertexAttribArray(Mesh.NORMALS_VBO_ID);
         }
 
-        defaultShaderProgram.unbind();
+        defaultShaderProgram.unbind();*/
     }
 
     public void cleanup() {

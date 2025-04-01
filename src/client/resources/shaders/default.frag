@@ -5,22 +5,24 @@ in vec2 outTexCoord;
 in vec3 outNormal;
 
 // Uniforms
-uniform vec3 objectColor; // Example uniform for a solid color
-uniform sampler2D texture_sampler;
+uniform vec3 tintColor;
+uniform sampler2D textureSampler;
 
 // Output color for the fragment
 out vec4 FragColor;
 
 void main()
 {
-    // Simple: Output a fixed color set by uniform
-    FragColor = vec4(objectColor, 1.0);
+    vec4 texColor = texture(textureSampler, outTexCoord);
 
-    // Example using texture:
-    // FragColor = texture(texture_sampler, outTexCoord);
+    vec3 finalRGB = texColor.rgb * tintColor;
+    float finalAlpha = texColor.a;
+
+    FragColor = vec4(finalRGB, finalAlpha);
+    //FragColor = vec4(1.0, finalRGB.g, 1.0, 1.0);
 
     // Example simple lighting (requires normals):
     // vec3 lightDir = normalize(vec3(1, 1, 1));
     // float diff = max(dot(normalize(outNormal), lightDir), 0.2); // Ambient term 0.2
-    // FragColor = vec4(objectColor * diff, 1.0);
+    // FragColor = vec4(tintColor * diff, 1.0);
 }

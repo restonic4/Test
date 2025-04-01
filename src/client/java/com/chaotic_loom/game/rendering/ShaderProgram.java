@@ -85,9 +85,10 @@ public class ShaderProgram {
         uniforms.put(uniformName, uniformLocation);
     }
 
-    // Add methods for different uniform types (Matrix4f, Vector3f, int, float, etc.)
+
+    // --- UNIFORM SETTERS ---
+
     public void setUniform(String uniformName, Matrix4f value) {
-        // Dump the matrix into a float buffer
         try (MemoryStack stack = MemoryStack.stackPush()) {
             FloatBuffer fb = stack.mallocFloat(16);
             value.get(fb);
@@ -101,6 +102,14 @@ public class ShaderProgram {
 
     public void setUniform(String uniformName, float value) {
         glUniform1f(uniforms.get(uniformName), value);
+    }
+
+    public void setUniform(String uniformName, Vector2f value) {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer fb = stack.mallocFloat(2);
+            value.get(fb);
+            glUniform2fv(uniforms.get(uniformName), fb);
+        }
     }
 
     public void setUniform(String uniformName, Vector3f value) {

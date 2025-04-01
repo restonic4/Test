@@ -28,9 +28,9 @@ public class Texture {
     }
 
     // Creates a texture and loads data
-    public Texture(Identifier identifier) throws Exception {
+    public Texture(String resourcePath) throws Exception {
         this(); // Generate ID
-        loadFromClasspath(identifier);
+        loadFromClasspath(resourcePath);
     }
 
     public void loadFromClasspath(String resourcePath) throws Exception {
