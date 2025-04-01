@@ -2,10 +2,10 @@ package com.chaotic_loom.game.core;
 
 import com.chaotic_loom.game.components.ClientGameObject;
 import com.chaotic_loom.game.core.utils.ClientConstants;
-import com.chaotic_loom.game.core.utils.TempServer;
 import com.chaotic_loom.game.events.WindowEvents;
 import com.chaotic_loom.game.networking.ClientNetworkingContext;
 import com.chaotic_loom.game.rendering.*;
+import com.chaotic_loom.game.rendering.components.*;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -21,6 +21,7 @@ public class ClientEngine extends AbstractEngine {
     private final ClientNetworkingContext clientNetworkingContext;
     private final ClientTimer timer;
     private final RenderStats renderStats;
+    private final TextureManager textureManager;
 
     private final List<ClientGameObject> gameObjects; // TEMP state
     private final Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> atlasRenderBatch;
@@ -35,6 +36,7 @@ public class ClientEngine extends AbstractEngine {
         this.clientNetworkingContext = new ClientNetworkingContext();
         this.timer = new ClientTimer();
         this.renderStats = new RenderStats();
+        this.textureManager = new TextureManager();
         this.gameObjects = new ArrayList<>(); // TEMP state
         this.atlasRenderBatch = new HashMap<>();
     }
@@ -46,7 +48,7 @@ public class ClientEngine extends AbstractEngine {
         getArgsManager().throwIfMissing("uuid");
 
         window.init();
-        TextureManager.getInstance().bakeAtlases("textures");
+        textureManager.bakeAtlases("textures");
         timer.init();
         renderer.init(window);
         inputManager.init(window);
@@ -54,20 +56,20 @@ public class ClientEngine extends AbstractEngine {
 
         // Create sample geometry (TEMP)
         Mesh cubeMesh = Cube.createMesh();
-        ClientGameObject cube1 = new ClientGameObject(cubeMesh, "/textures/stone.png");
+        ClientGameObject cube1 = new ClientGameObject(cubeMesh, textureManager.getTextureInfo("/textures/stone.png"));
         cube1.getTransform().setPosition(0, 0, -2);
         gameObjects.add(cube1);
-        ClientGameObject cube2 = new ClientGameObject(cubeMesh, "/textures/wood.png");
+        ClientGameObject cube2 = new ClientGameObject(cubeMesh, textureManager.getTextureInfo("/textures/wood.png"));
         cube2.getTransform().setPosition(-1.5f, 0.5f, -3);
         cube2.getTransform().setScale(0.5f);
         gameObjects.add(cube2);
-        ClientGameObject cube3 = new ClientGameObject(cubeMesh, "/textures/wood.png");
+        ClientGameObject cube3 = new ClientGameObject(cubeMesh, textureManager.getTextureInfo("/textures/wood.png"));
         cube3.getTransform().setPosition(-3.5f, 1.5f, -4);
         cube3.getTransform().setScale(1.5f);
         gameObjects.add(cube3);
 
         for (int i = 0; i < 5; i++) {
-            ClientGameObject cube = new ClientGameObject(cubeMesh, "/textures/dirt.png");
+            ClientGameObject cube = new ClientGameObject(cubeMesh, textureManager.getTextureInfo("/textures/dirt.png"));
             cube.getTransform().setPosition(0, 0, -4 * i);
             gameObjects.add(cube);
         }
@@ -198,12 +200,12 @@ public class ClientEngine extends AbstractEngine {
             TextureAtlasInfo atlasInfo = go.getAtlasInfo();
 
             // Validate necessary data
-            if (mesh == null || atlasInfo == null || atlasInfo.atlasTexture == null) {
+            if (mesh == null || atlasInfo == null || atlasInfo.atlasTexture() == null) {
                 if (atlasInfo == null) getLogger().warn("GameObject missing AtlasInfo, skipping render.");
                 continue;
             }
 
-            Texture atlasTexture = atlasInfo.atlasTexture;
+            Texture atlasTexture = atlasInfo.atlasTexture();
 
             // Populate the 3-level batch structure:
             atlasRenderBatch
@@ -246,7 +248,7 @@ public class ClientEngine extends AbstractEngine {
         getNetworkingManager().cleanup();
         renderer.cleanup();
 
-        TextureManager.getInstance().cleanup();
+        textureManager.cleanup();
 
         // Mesh cleanup (needs proper management)
         Set<Mesh> uniqueMeshes = new HashSet<>();

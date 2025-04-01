@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering;
+package com.chaotic_loom.game.rendering.components;
 
 public class RenderStats {
     // Frame Stats (Reset each frame)
@@ -39,10 +39,6 @@ public class RenderStats {
 
     public void recordBatchProcessed() {
         batchesProcessedThisFrame++;
-    }
-
-    public void recordBatchProcessed(int amount) {
-        batchesProcessedThisFrame += amount;
     }
 
     // --- Getters for Displaying Stats ---

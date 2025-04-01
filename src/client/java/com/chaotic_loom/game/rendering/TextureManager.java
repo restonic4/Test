@@ -1,5 +1,7 @@
 package com.chaotic_loom.game.rendering;
 
+import com.chaotic_loom.game.rendering.components.Texture;
+import com.chaotic_loom.game.rendering.components.TextureAtlasInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -26,23 +28,16 @@ import static org.lwjgl.stb.STBImage.*;
 
 public class TextureManager {
     private static final Logger LOGGER = LogManager.getLogger("TextureManager");
-    private static final TextureManager INSTANCE = new TextureManager();
 
     // Configuration
     private final int maxAtlasWidth = 2048;
     private final int maxAtlasHeight = 2048;
-    private int padding = 0;
+    private final int padding = 0;
 
     // State
     private final List<Texture> atlases = new ArrayList<>();
     private final Map<String, TextureAtlasInfo> textureInfoMap = new HashMap<>();
     private boolean baked = false;
-
-    private TextureManager() {}
-
-    public static TextureManager getInstance() {
-        return INSTANCE;
-    }
 
     /**
      * Finds textures, packs them into atlases, uploads to GPU, and creates mapping info.
@@ -113,6 +108,13 @@ public class TextureManager {
         return images;
     }
 
+    /**
+     * Packs a list of images into atlas bins using a MaxRects algorithm.
+     * This method loads image dimensions, sorts images by descending area,
+     * and attempts to place them into bins.
+     * @param images The list of images to pack.
+     * @return A list of AtlasBin objects containing the packed images.
+     */
     private List<AtlasBin> packTexturesMaxRects(List<ImageToPack> images) {
         // Load image dimensions first
         LOGGER.debug("Loading image dimensions...");
@@ -236,6 +238,8 @@ public class TextureManager {
 
                 // --- Create OpenGL Texture ---
                 atlasTexture = new Texture(); // Create empty texture object
+                atlasTexture.setWidth(maxAtlasWidth);
+                atlasTexture.setHeight(maxAtlasHeight);
 
                 glBindTexture(GL_TEXTURE_2D, atlasTexture.getTextureId());
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
@@ -268,7 +272,7 @@ public class TextureManager {
 
                 // --- Debug: Save atlas to file ---
                 // TODO: args
-                //saveAtlasToFile(atlasBuffer, binWidth, binHeight, "atlas_" + i + ".png");
+                saveAtlasToFile(atlasBuffer, binWidth, binHeight, "atlas_" + i + ".png");
             } catch (Exception e) {
                 LOGGER.error("Failed to generate atlas texture for bin {}: {}", i, e.getMessage(), e);
 
@@ -304,7 +308,7 @@ public class TextureManager {
         dstBuffer.clear();
     }
 
-    // Debug method to save buffer as PNG
+    /** Debug method to save buffer as PNG **/
     private void saveAtlasToFile(ByteBuffer buffer, int width, int height, String filename) {
         try {
             Path path = Paths.get(filename);

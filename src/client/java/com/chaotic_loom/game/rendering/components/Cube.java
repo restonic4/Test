@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering;
+package com.chaotic_loom.game.rendering.components;
 
 public class Cube {
 

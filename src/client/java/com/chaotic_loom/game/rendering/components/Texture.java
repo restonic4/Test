@@ -1,6 +1,6 @@
-package com.chaotic_loom.game.rendering;
+package com.chaotic_loom.game.rendering.components;
 
-import com.chaotic_loom.game.registries.components.Identifier;
+import jdk.jfr.Experimental;
 import org.lwjgl.system.MemoryStack;
 
 import java.io.IOException;
@@ -36,6 +36,7 @@ public class Texture {
     public void loadFromClasspath(String resourcePath) throws Exception {
         ByteBuffer imageBuffer;
         Path path = null;
+
         // Try loading from classpath resources
         try (InputStream source = Texture.class.getResourceAsStream(resourcePath);
              ReadableByteChannel rbc = Channels.newChannel(source))
@@ -43,6 +44,7 @@ public class Texture {
             if (source == null) {
                 throw new IOException("Classpath resource not found: " + resourcePath);
             }
+
             // Allocate buffer (consider using MemoryUtil.memAlloc for large files if needed)
             imageBuffer = ByteBuffer.allocateDirect(1024 * 1024); // 1MB buffer, might need resizing logic
             while (rbc.read(imageBuffer) != -1) {
@@ -51,6 +53,7 @@ public class Texture {
                     throw new IOException("Buffer too small for resource: " + resourcePath);
                 }
             }
+
             imageBuffer.flip();
         } catch (IOException e) {
             System.err.println("Failed to load texture from classpath: " + resourcePath);
@@ -58,12 +61,7 @@ public class Texture {
         }
 
         uploadTextureData(imageBuffer);
-        stbi_image_free(imageBuffer); // Free buffer allocated by STB if stbi_load was used
-        // If using our own buffer, this might not be needed? Need to verify STB interaction.
-        // Let's assume we load with STB directly for simplicity below.
-        // Reimplement using stbi_load_from_memory or ideally stbi_load direct from path
-        // Corrected approach: Use file system path or load bytes manually then use stbi_load_from_memory
-        throw new UnsupportedOperationException("Classpath loading needs refinement. Use file path for now.");
+        stbi_image_free(imageBuffer);
     }
 
     public void loadFromFile(Path filePath) throws Exception {
@@ -89,7 +87,6 @@ public class Texture {
         // Free the image buffer allocated by stbi_load
         stbi_image_free(imageBuffer);
     }
-
 
     private void uploadTextureData(ByteBuffer imageBuffer) {
         // Bind the texture
@@ -125,6 +122,7 @@ public class Texture {
         if (unit < 0 || unit >= 32) { // Check against reasonable limit
             throw new IllegalArgumentException("Texture unit index out of range: " + unit);
         }
+
         glActiveTexture(GL_TEXTURE0 + unit); // Activate the texture unit first
         glBindTexture(GL_TEXTURE_2D, textureId); // Bind this texture to the active unit
     }
@@ -140,15 +138,23 @@ public class Texture {
         glDeleteTextures(textureId);
     }
 
-    /** Gets the OpenGL texture ID. */
+
+    // --- SETTERS ---
+    public void setWidth(int width) {
+        this.width = width;
+    }
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
+
+    // --- GETTERS ---
     public int getTextureId() {
         return textureId;
     }
-
     public int getWidth() {
         return width;
     }
-
     public int getHeight() {
         return height;
     }

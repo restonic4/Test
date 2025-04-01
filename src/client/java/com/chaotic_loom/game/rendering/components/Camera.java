@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering; // Or your rendering package
+package com.chaotic_loom.game.rendering.components; // Or your rendering package
 
 import org.joml.*;
 import org.joml.Math;

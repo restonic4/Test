@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering;
+package com.chaotic_loom.game.rendering.components;
 
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
@@ -27,7 +27,7 @@ public class Mesh {
     private final int vaoId;
     private final List<Integer> vboIdList; // Store VBO IDs for cleanup
     private final int vertexCount;
-    private final int indexCount; // Number of indices if using EBO
+    private final int indicesCount; // Number of indices if using EBO
 
     private int instanceDataVboId; // VBO for combined instance data (matrices, uv info)
     private int maxInstances;      // Current capacity of the instance VBO
@@ -44,7 +44,7 @@ public class Mesh {
                 throw new IllegalArgumentException("Positions and indices cannot be null for an indexed mesh.");
             }
             this.vertexCount = positions.length / 3; // 3 components per position
-            this.indexCount = indices.length;
+            this.indicesCount = indices.length;
             this.maxInstances = initialMaxInstances > 0 ? initialMaxInstances : 1; // Ensure at least 1
             vboIdList = new ArrayList<>();
 
@@ -199,7 +199,7 @@ public class Mesh {
 
         // --- Fill CPU buffer ---
         this.instanceDataBuffer.clear();
-        Vector2f uvOffset = new Vector2f(atlasInfo.u0, atlasInfo.v0);
+        Vector2f uvOffset = new Vector2f(atlasInfo.u0(), atlasInfo.v0());
         Vector2f uvScale = new Vector2f(atlasInfo.getWidthUV(), atlasInfo.getHeightUV());
 
         for (Matrix4f modelMatrix : transforms) {
@@ -224,25 +224,12 @@ public class Mesh {
         glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind
     }
 
-    /** Renders the mesh using instancing. Assumes VAO is bound externally. */
-    public void renderInstanced(int instanceCount) {
-        if (instanceCount > 0 && indexCount > 0) {
-            // Assumes the correct VAO and shader program are already bound!
-            // Assumes instance data VBO has been updated!
-            glDrawElementsInstanced(GL_TRIANGLES, this.indexCount, GL_UNSIGNED_INT, 0, instanceCount);
-        } else if (instanceCount > 0) {
-            // Handle non-indexed drawing if necessary (using glDrawArraysInstanced)
-            // glDrawArraysInstanced(GL_TRIANGLES, 0, vertexCount, instanceCount);
-            System.err.println("Attempted instanced rendering on non-indexed mesh (not implemented).");
-        }
-    }
-
     public int getVaoId() {
         return vaoId;
     }
 
-    public int getVertexCount() {
-        return indexCount > 0 ? indexCount : vertexCount;
+    public int getIndicesCount() {
+        return indicesCount;
     }
 
     public void cleanup() {
