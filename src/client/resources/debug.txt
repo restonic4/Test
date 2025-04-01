@@ -1,0 +1,18 @@
+texture atlas: {
+    mesh: {
+        textureAtlasInfo: {
+            matrix
+            matrix
+            matrix
+            matrix
+            matrix
+        }
+        textureAtlasInfo: {
+            matrix
+            matrix
+        }
+        textureAtlasInfo: {
+            matrix
+        }
+    }
+}

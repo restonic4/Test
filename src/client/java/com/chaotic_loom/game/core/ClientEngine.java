@@ -23,7 +23,7 @@ public class ClientEngine extends AbstractEngine {
     private final RenderStats renderStats;
 
     private final List<ClientGameObject> gameObjects; // TEMP state
-    Map<RenderBatchKey, List<InstanceData>> renderBatch;
+    private final Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> atlasRenderBatch;
 
     public ClientEngine() {
         super(Environment.CLIENT);
@@ -36,7 +36,7 @@ public class ClientEngine extends AbstractEngine {
         this.timer = new ClientTimer();
         this.renderStats = new RenderStats();
         this.gameObjects = new ArrayList<>(); // TEMP state
-        this.renderBatch = new HashMap<>();
+        this.atlasRenderBatch = new HashMap<>();
     }
 
     @Override
@@ -54,15 +54,62 @@ public class ClientEngine extends AbstractEngine {
 
         // Create sample geometry (TEMP)
         Mesh cubeMesh = Cube.createMesh();
-        ClientGameObject cube1 = new ClientGameObject(cubeMesh, "/textures/block/stone.png");
+        ClientGameObject cube1 = new ClientGameObject(cubeMesh, "/textures/stone.png");
         cube1.getTransform().setPosition(0, 0, -2);
         gameObjects.add(cube1);
-        ClientGameObject cube2 = new ClientGameObject(cubeMesh, "/textures/block/acacia_log.png");
+        ClientGameObject cube2 = new ClientGameObject(cubeMesh, "/textures/wood.png");
         cube2.getTransform().setPosition(-1.5f, 0.5f, -3);
         cube2.getTransform().setScale(0.5f);
         gameObjects.add(cube2);
+        ClientGameObject cube3 = new ClientGameObject(cubeMesh, "/textures/wood.png");
+        cube3.getTransform().setPosition(-3.5f, 1.5f, -4);
+        cube3.getTransform().setScale(1.5f);
+        gameObjects.add(cube3);
 
-        TempServer.joinServer(this);
+        for (int i = 0; i < 5; i++) {
+            ClientGameObject cube = new ClientGameObject(cubeMesh, "/textures/dirt.png");
+            cube.getTransform().setPosition(0, 0, -4 * i);
+            gameObjects.add(cube);
+        }
+
+        // Testing batch system
+        prepareRenderBatch();
+        // Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>>
+        for (Map.Entry<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> textureEntry : atlasRenderBatch.entrySet()) {
+            Texture texture = textureEntry.getKey();
+            Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>> meshMap = textureEntry.getValue();
+
+            System.out.println("texture atlas");
+            System.out.println("{");
+
+            for (Map.Entry<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>> meshEntry : meshMap.entrySet()) {
+                Mesh mesh = meshEntry.getKey();
+                Map<TextureAtlasInfo, List<Matrix4f>> textureAtlasInfoMap = meshEntry.getValue();
+
+                System.out.println("    mesh");
+                System.out.println("    {");
+
+                for (Map.Entry<TextureAtlasInfo, List<Matrix4f>> textureAtlasInfoEntry : textureAtlasInfoMap.entrySet()) {
+                    TextureAtlasInfo textureAtlasInfo = textureAtlasInfoEntry.getKey();
+                    List<Matrix4f> matrix4fList = textureAtlasInfoEntry.getValue();
+
+                    System.out.println("        textureAtlasInfo");
+                    System.out.println("        {");
+
+                    for (Matrix4f matrix4f : matrix4fList) {
+                        System.out.println("            matrix");
+                    }
+
+                    System.out.println("        }");
+                }
+
+                System.out.println("    }");
+            }
+
+            System.out.println("}");
+        }
+
+        //TempServer.joinServer(this);
 
         // Modify viewport on window modification
         WindowEvents.RESIZE.register((window1, width, height) -> {
@@ -141,8 +188,8 @@ public class ClientEngine extends AbstractEngine {
         }
     }
 
-    private void render() {
-        renderBatch.clear();
+    private void prepareRenderBatch() {
+        atlasRenderBatch.clear();
         renderStats.resetFrame();
 
         // Prepare batch
@@ -150,25 +197,29 @@ public class ClientEngine extends AbstractEngine {
             Mesh mesh = go.getMesh();
             TextureAtlasInfo atlasInfo = go.getAtlasInfo();
 
+            // Validate necessary data
             if (mesh == null || atlasInfo == null || atlasInfo.atlasTexture == null) {
-                if (atlasInfo == null) getLogger().warn("GameObject missing AtlasInfo, skipping render for GO.");
+                if (atlasInfo == null) getLogger().warn("GameObject missing AtlasInfo, skipping render.");
                 continue;
             }
 
             Texture atlasTexture = atlasInfo.atlasTexture;
 
-            // Create the key for this batch
-            RenderBatchKey key = new RenderBatchKey(atlasTexture, mesh);
-            InstanceData instance = new InstanceData(go.getModelMatrix(), atlasInfo);
-
-            // Add instance to the list associated with the key
-            List<InstanceData> batchList = renderBatch.computeIfAbsent(key, k -> new ArrayList<>());
-            batchList.add(instance);
+            // Populate the 3-level batch structure:
+            atlasRenderBatch
+                    .computeIfAbsent(atlasTexture, k -> new HashMap<>())    // Level 1: Atlas Texture
+                    .computeIfAbsent(mesh, k -> new HashMap<>())    // Level 2: Mesh
+                    .computeIfAbsent(atlasInfo, k -> new ArrayList<>())     // Level 3: AtlasInfo (UV region)
+                    .add(go.getModelMatrix());      // Add instance matrix to the list
         }
+    }
 
-        renderer.render(window, camera, renderBatch, renderStats);
+    private void render() {
+        prepareRenderBatch();
 
-        getLogger().info(renderStats.getSummary());
+        renderer.render(window, camera, atlasRenderBatch, renderStats);
+
+        //getLogger().info(renderStats.getSummary());
     }
 
     private void sync() {
