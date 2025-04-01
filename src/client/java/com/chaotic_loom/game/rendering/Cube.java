@@ -84,6 +84,6 @@ public class Cube {
 
     public static Mesh createMesh() {
         // Currently only positions and indices
-        return new Mesh(POSITIONS, BASE_UVS, NORMALS, INDICES);
+        return new Mesh(POSITIONS, BASE_UVS, NORMALS, INDICES, 100);
     }
 }

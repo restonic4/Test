@@ -219,7 +219,9 @@ public class ClientEngine extends AbstractEngine {
 
         renderer.render(window, camera, atlasRenderBatch, renderStats);
 
-        //getLogger().info(renderStats.getSummary());
+        if (renderStats.getTotalFrames() % 60 == 0) {
+            //getLogger().info(renderStats.getSummary());
+        }
     }
 
     private void sync() {

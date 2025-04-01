@@ -36,13 +36,8 @@ public class Renderer {
         // Create uniforms
         defaultShaderProgram.createUniform("projectionMatrix");
         defaultShaderProgram.createUniform("viewMatrix");
-        defaultShaderProgram.createUniform("modelMatrix");
         defaultShaderProgram.createUniform("tintColor");
         defaultShaderProgram.createUniform("textureSampler");
-
-        // Atlas UVs
-        defaultShaderProgram.createUniform("uvOffset");
-        defaultShaderProgram.createUniform("uvScale");
 
         // Enable Depth Testing (Important for 3D)
         glEnable(GL_DEPTH_TEST);
@@ -58,23 +53,31 @@ public class Renderer {
             Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> atlasRenderBatch,
             RenderStats renderStats
     ) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear buffers
 
-        // Enable common attributes once
-        glEnableVertexAttribArray(Mesh.POSITION_VBO_ID);
-        glEnableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
-        glEnableVertexAttribArray(Mesh.NORMALS_VBO_ID);
-
+        // Bind the shader program ONCE before the main loops
         defaultShaderProgram.bind();
 
-        // Upload camera matrices
+        // Set uniforms that are constant for the entire frame
         defaultShaderProgram.setUniform("projectionMatrix", camera.getProjectionMatrix());
         defaultShaderProgram.setUniform("viewMatrix", camera.getViewMatrix());
+        defaultShaderProgram.setUniform("textureSampler", 0); // Use texture unit 0
 
         Texture lastBoundAtlas = null;
         Mesh lastBoundMesh = null;
 
-        renderStats.recordBatchProcessed(atlasRenderBatch.size());
+        renderStats.recordBatchProcessed(atlasRenderBatch.size()); // Counts texture atlases
+
+        // Enable required vertex attributes ONCE (including instance attributes)
+        // Vertex attributes
+        glEnableVertexAttribArray(Mesh.POSITION_VBO_ID);
+        glEnableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
+        glEnableVertexAttribArray(Mesh.NORMALS_VBO_ID);
+        // Instance attributes (Matrix needs 4 slots, UV offset, UV scale)
+        for(int i = 0; i < 4; ++i) glEnableVertexAttribArray(Mesh.INSTANCE_MODEL_MATRIX_LOC_START + i);
+        glEnableVertexAttribArray(Mesh.INSTANCE_UV_OFFSET_LOC);
+        glEnableVertexAttribArray(Mesh.INSTANCE_UV_SCALE_LOC);
+
 
         // --- Loop 1: Atlas Texture ---
         for (Map.Entry<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> atlasEntry : atlasRenderBatch.entrySet()) {
@@ -83,7 +86,8 @@ public class Renderer {
 
             // Bind Atlas Texture (only if changed)
             if (atlasTexture != lastBoundAtlas) {
-                atlasTexture.bind(0);
+                glActiveTexture(GL_TEXTURE0); // Ensure texture unit 0 is active
+                atlasTexture.bind(0);         // Bind the new atlas texture
                 lastBoundAtlas = atlasTexture;
                 renderStats.recordAtlasBind();
             }
@@ -94,52 +98,64 @@ public class Renderer {
                 Map<TextureAtlasInfo, List<Matrix4f>> meshGroup = meshEntry.getValue();
 
                 // Bind Mesh VAO (only if changed)
+                // Includes vertex VBOs, instance VBO, EBO, and attribute pointers/divisors
                 if (sharedMesh != lastBoundMesh) {
                     glBindVertexArray(sharedMesh.getVaoId());
                     lastBoundMesh = sharedMesh;
                     renderStats.recordMeshBind();
                 }
 
-                // --- Loop 3: Texture Region (AtlasInfo -> UV Uniforms) ---
+                // --- Loop 3: Texture Region (AtlasInfo -> Instance Data Upload & Draw Call) ---
                 for (Map.Entry<TextureAtlasInfo, List<Matrix4f>> infoEntry : meshGroup.entrySet()) {
-                    TextureAtlasInfo atlasInfo = infoEntry.getKey();
-                    List<Matrix4f> transforms = infoEntry.getValue();
+                    TextureAtlasInfo atlasInfo = infoEntry.getKey(); // Contains UV offset/scale info
+                    List<Matrix4f> transforms = infoEntry.getValue(); // List of model matrices
 
-                    if (transforms.isEmpty()) continue;
+                    int instanceCount = transforms.size();
+                    if (instanceCount == 0) continue; // Skip if no instances for this specific mesh/texture region
 
-                    // Set UV Uniforms ONCE for this group of instances
-                    uvOffsetVec.set(atlasInfo.u0, atlasInfo.v0);
-                    uvScaleVec.set(atlasInfo.getWidthUV(), atlasInfo.getHeightUV());
-                    defaultShaderProgram.setUniform("uvOffset", uvOffsetVec);
-                    defaultShaderProgram.setUniform("uvScale", uvScaleVec);
+                    // *** CORE INSTANCING STEP ***
+                    // 1. Update the Instance Data VBO associated with this mesh
+                    //    This uploads all model matrices and the *single* UV offset/scale for this batch.
+                    sharedMesh.updateInstanceData(transforms, atlasInfo);
 
-                    // --- Loop 4: Instances (Transforms) ---
-                    // Draw all instances using the currently bound Atlas, Mesh, and UV params
-                    for (Matrix4f modelMatrix : transforms) {
-                        defaultShaderProgram.setUniform("modelMatrix", modelMatrix);
-                        defaultShaderProgram.setUniform("tintColor", defaultObjectColor); // Still default tint
+                    // 2. Set any remaining uniforms (e.g., tint color if it varies per batch, otherwise set outside loops)
+                    defaultShaderProgram.setUniform("tintColor", defaultObjectColor); // Example: set tint
 
-                        // Actual Draw Call
-                        glDrawElements(GL_TRIANGLES, sharedMesh.getVertexCount(), GL_UNSIGNED_INT, 0);
-                        renderStats.recordDrawCall(1);
-                    }
-                    // --- End Instance Loop ---
+                    // 3. Issue ONE instanced draw call for all instances in this batch
+                    //    Uses the currently bound VAO (sharedMesh), EBO (inside VAO), and Shader Program.
+                    //    The shader will automatically fetch data from vertex VBOs (per vertex)
+                    //    and instance VBOs (per instance) based on the VAO configuration.
+                    sharedMesh.renderInstanced(instanceCount);
 
-                } // End Texture Region Loop
+                    // Record ONE draw call for potentially MANY instances
+                    renderStats.recordDrawCall(); // Only one actual GL draw call here!
+                    renderStats.recordInstancesRendered(instanceCount); // Track total instances rendered
+
+                    // --- REMOVED: Inner loop drawing individual instances ---
+                    // --- REMOVED: Setting modelMatrix, uvOffset, uvScale uniforms per instance ---
+
+                } // End Texture Region (Instancing Batch) Loop
             } // End Mesh Loop
         } // End Atlas Loop
 
-        // Unbind resources after all batches are drawn
-        glBindVertexArray(0); // Unbind VAO
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture from unit 0
+        // --- Cleanup after rendering all batches ---
+        glBindVertexArray(0); // Unbind the last VAO
 
-        // Disable attributes
+        // Unbind texture from unit 0 (optional but good practice)
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Disable vertex attribute arrays (match enabling)
         glDisableVertexAttribArray(Mesh.POSITION_VBO_ID);
         glDisableVertexAttribArray(Mesh.TEXTURE_COORDS_VBO_ID);
         glDisableVertexAttribArray(Mesh.NORMALS_VBO_ID);
+        // Disable instance attribute arrays
+        for(int i = 0; i < 4; ++i) glDisableVertexAttribArray(Mesh.INSTANCE_MODEL_MATRIX_LOC_START + i);
+        glDisableVertexAttribArray(Mesh.INSTANCE_UV_OFFSET_LOC);
+        glDisableVertexAttribArray(Mesh.INSTANCE_UV_SCALE_LOC);
 
-        defaultShaderProgram.unbind();
+
+        defaultShaderProgram.unbind(); // Unbind the shader program
     }
 
     public void cleanup() {

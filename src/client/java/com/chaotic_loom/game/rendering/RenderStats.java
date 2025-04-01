@@ -29,10 +29,12 @@ public class RenderStats {
         meshBindsThisFrame++;
     }
 
-    public void recordDrawCall(int instanceCount) {
+    public void recordDrawCall() {
         drawCallsThisFrame++;
-        instancesDrawnThisFrame += instanceCount; // Assuming one draw call draws 'instanceCount' items
-        // For non-instanced loop, call with instanceCount = 1
+    }
+
+    public void recordInstancesRendered(int instanceCount) {
+        instancesDrawnThisFrame += instanceCount;
     }
 
     public void recordBatchProcessed() {
