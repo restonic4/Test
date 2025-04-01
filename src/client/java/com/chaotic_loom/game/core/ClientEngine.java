@@ -20,9 +20,9 @@ public class ClientEngine extends AbstractEngine {
     private final InputManager inputManager;
     private final ClientNetworkingContext clientNetworkingContext;
     private final ClientTimer timer;
+    private final RenderStats renderStats;
 
     private final List<ClientGameObject> gameObjects; // TEMP state
-    private final Map<Texture, Map<Mesh, List<Matrix4f>>> atlasRenderBatch;
     Map<RenderBatchKey, List<InstanceData>> renderBatch;
 
     public ClientEngine() {
@@ -34,8 +34,8 @@ public class ClientEngine extends AbstractEngine {
         this.inputManager = new InputManager();
         this.clientNetworkingContext = new ClientNetworkingContext();
         this.timer = new ClientTimer();
+        this.renderStats = new RenderStats();
         this.gameObjects = new ArrayList<>(); // TEMP state
-        this.atlasRenderBatch = new HashMap<>();
         this.renderBatch = new HashMap<>();
     }
 
@@ -142,9 +142,8 @@ public class ClientEngine extends AbstractEngine {
     }
 
     private void render() {
-        TextureManager texManager = TextureManager.getInstance();
-
         renderBatch.clear();
+        renderStats.resetFrame();
 
         // Prepare batch
         for (ClientGameObject go : gameObjects) {
@@ -167,34 +166,9 @@ public class ClientEngine extends AbstractEngine {
             batchList.add(instance);
         }
 
-        renderer.render(window, camera, renderBatch);
+        renderer.render(window, camera, renderBatch, renderStats);
 
-        // Prepare batch
-        /*for (ClientGameObject go : gameObjects) {
-            Mesh mesh = go.getMesh();
-            String texturePath = go.getTexturePath();
-
-            if (mesh == null || texturePath == null) continue;
-
-            // Look up the atlas info for this object's texture
-            TextureAtlasInfo atlasInfo = texManager.getTextureInfo(texturePath);
-
-            if (atlasInfo == null || atlasInfo.atlasTexture == null) {
-                getLogger().warn("Atlas info not found for texture: {}", texturePath);
-                continue;
-            }
-
-            Texture atlasTexture = atlasInfo.atlasTexture; // The specific atlas texture GPU object
-
-            // --- Populate the Atlas-Grouped Batch ---
-            Map<Mesh, List<Matrix4f>> meshBatch = atlasRenderBatch.computeIfAbsent(atlasTexture, k -> new HashMap<>());
-            List<Matrix4f> instances = meshBatch.computeIfAbsent(mesh, k -> new ArrayList<>());
-
-            // Add the model matrix for this instance
-            instances.add(go.getModelMatrix());
-        }
-
-        renderer.render(window, camera, atlasRenderBatch);*/
+        getLogger().info(renderStats.getSummary());
     }
 
     private void sync() {
