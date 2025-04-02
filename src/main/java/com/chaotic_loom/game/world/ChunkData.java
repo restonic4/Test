@@ -1,13 +1,16 @@
-package com.chaotic_loom.game;
+package com.chaotic_loom.game.world;
 
-import static com.chaotic_loom.game.BlockTypes.*;
+import com.chaotic_loom.game.registries.Registry;
+import com.chaotic_loom.game.registries.built_in.Blocks;
+import com.chaotic_loom.game.world.components.Block;
+
+import static com.chaotic_loom.game.core.util.SharedConstants.*;
 
 public class ChunkData {
+    // Core data: 3D array of block volatile IDs.
+    private final short[][][] blocks;
 
-    // Core data: 3D array of block type IDs.
-    private final byte[][][] blocks;
-
-    // Optional: Store chunk's position in the world grid
+    // Store chunk's position in the world grid
     private final int chunkX, chunkY, chunkZ;
 
     /**
@@ -20,9 +23,8 @@ public class ChunkData {
         this.chunkX = chunkX;
         this.chunkY = chunkY;
         this.chunkZ = chunkZ;
-        // Initialize with air by default
-        this.blocks = new byte[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
-        // In a real game, you might load data from a file or generator here.
+
+        this.blocks = new short[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
     }
 
     // --- Getters for Coordinates ---
@@ -38,16 +40,16 @@ public class ChunkData {
      * @param x Local X (0 to CHUNK_WIDTH - 1)
      * @param y Local Y (0 to CHUNK_HEIGHT - 1)
      * @param z Local Z (0 to CHUNK_DEPTH - 1)
-     * @param blockType The new block type ID.
+     * @param block The new block.
      * @return true if the block was set successfully, false if out of bounds.
      */
-    public synchronized boolean setBlock(int x, int y, int z, byte blockType) {
+    public synchronized boolean setBlock(int x, int y, int z, Block block) {
         if (isOutOfBounds(x, y, z)) {
-            // Logging might be better than System.err in common code
-            // LogManager.getLogger().warn("SetBlock coordinates out of bounds...");
+            System.err.println("REPLACE WITH LOGGER: SetBlock coordinates out of bounds...");
             return false;
         }
-        blocks[x][y][z] = blockType;
+
+        blocks[x][y][z] = block.getInternalMappedRegistryID();
         return true;
     }
 
@@ -60,11 +62,16 @@ public class ChunkData {
      * @param z Local Z (0 to CHUNK_DEPTH - 1)
      * @return The block type ID, or BLOCK_AIR if out of bounds.
      */
-    public byte getBlock(int x, int y, int z) {
+    public Block getBlock(int x, int y, int z) {
+        short internalBlockID = -1;
+
         if (isOutOfBounds(x, y, z)) {
-            return BLOCK_AIR;
+            internalBlockID = Blocks.AIR.getInternalMappedRegistryID();
+        } else {
+            internalBlockID =  blocks[x][y][z];
         }
-        return blocks[x][y][z];
+
+        return (Block) Registry.getRegistryObject(internalBlockID);
     }
 
     /**
@@ -87,9 +94,7 @@ public class ChunkData {
      * Modifying the returned array directly bypasses bounds checks and synchronization.
      * @return The internal 3D byte array of block IDs.
      */
-    public byte[][][] getBlocksRaw() {
+    public short[][][] getBlocksRaw() {
         return blocks;
     }
-
-    // Consider adding methods for serialization/deserialization here if needed by both S/C.
 }

@@ -1,6 +1,6 @@
 package com.chaotic_loom.game.registries.built_in;
 
-import com.chaotic_loom.game.components.Block;
+import com.chaotic_loom.game.world.components.Block;
 import com.chaotic_loom.game.networking.components.Packet;
 import com.chaotic_loom.game.registries.components.RegistryKey;
 

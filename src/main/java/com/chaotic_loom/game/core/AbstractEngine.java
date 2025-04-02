@@ -1,13 +1,11 @@
 package com.chaotic_loom.game.core;
 
-import com.chaotic_loom.game.components.Block;
+import com.chaotic_loom.game.world.components.Block;
 import com.chaotic_loom.game.core.util.ArgsManager;
 import com.chaotic_loom.game.networking.NetworkingManager;
 import com.chaotic_loom.game.registries.Registry;
 import com.chaotic_loom.game.registries.built_in.RegistryKeys;
 import com.chaotic_loom.game.registries.components.Identifier;
-import com.chaotic_loom.game.registries.components.RegistryKey;
-import io.netty.channel.Channel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,7 +30,7 @@ public abstract class AbstractEngine implements Runnable {
 
         Map<Identifier, Block> registries = Registry.getRegistrySet(RegistryKeys.BLOCK);
         for (Block block : registries.values()) {
-            System.out.println(block.getIdentifier() + " -> " + block.getUniqueCode());
+            System.out.println(block.getIdentifier() + " -> " + block.getInternalMappedRegistryID());
         }
     }
 

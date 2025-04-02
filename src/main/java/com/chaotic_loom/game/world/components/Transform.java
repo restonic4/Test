@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.components;
+package com.chaotic_loom.game.world.components;
 
 import org.joml.Math;
 import org.joml.Quaternionf;

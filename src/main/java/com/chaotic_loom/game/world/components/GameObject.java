@@ -1,6 +1,4 @@
-package com.chaotic_loom.game.components;
-
-import org.joml.*;
+package com.chaotic_loom.game.world.components;
 
 public class GameObject {
 

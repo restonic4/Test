@@ -25,6 +25,9 @@ public class Registry {
     public static final Logger logger = LogManager.getLogger("Registry");
     private static final Map<RegistryKey<?>, Map<Identifier, ?>> registries = new HashMap<>();
 
+    private static short lastInternalMappedID = -1; // Assigns all RegistryObjects with a unique volatile small ID for memory optimization
+    private static Map<Short, RegistryObject> volatileRegistry = new HashMap<>();
+
     public static <T extends RegistryObject> T register(RegistryKey<T> registryKey, Identifier identifier, T object) {
         Map<Identifier, T> registry = getOrCreateRegistrySet(registryKey);
 
@@ -84,6 +87,17 @@ public class Registry {
 
     public static Map<RegistryKey<?>, Map<Identifier, ?>> getRegistries() {
         return registries;
+    }
+
+    public static short requestNewInternalMappedID(RegistryObject registryObject) {
+        lastInternalMappedID++;
+
+        volatileRegistry.put(lastInternalMappedID, registryObject);
+        return lastInternalMappedID;
+    }
+
+    public static RegistryObject getRegistryObject(short internalMappedID) {
+        return volatileRegistry.get(internalMappedID);
     }
 
     // Annotation

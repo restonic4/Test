@@ -1,10 +1,14 @@
-package com.chaotic_loom.game;
+package com.chaotic_loom.game.world;
 
 import com.chaotic_loom.game.rendering.TextureManager;
+import com.chaotic_loom.game.rendering.components.ChunkMesher;
 import com.chaotic_loom.game.rendering.mesh.Mesh;
 import com.chaotic_loom.game.rendering.texture.Texture;
+import com.chaotic_loom.game.world.components.Block;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
+
+import static com.chaotic_loom.game.core.util.SharedConstants.*;
 
 public class ClientChunk {
 
@@ -25,9 +29,9 @@ public class ClientChunk {
         // this.world = world;
         // Calculate world position based on chunk coordinates for rendering
         this.worldPosition = new Vector3f(
-                chunkData.getChunkX() * BlockTypes.CHUNK_WIDTH,
-                chunkData.getChunkY() * BlockTypes.CHUNK_HEIGHT,
-                chunkData.getChunkZ() * BlockTypes.CHUNK_DEPTH
+                chunkData.getChunkX() * CHUNK_WIDTH,
+                chunkData.getChunkY() * CHUNK_HEIGHT,
+                chunkData.getChunkZ() * CHUNK_DEPTH
         );
         // Initial mesh build could be triggered here or managed externally
     }
@@ -37,10 +41,10 @@ public class ClientChunk {
      * @param x Local X
      * @param y Local Y
      * @param z Local Z
-     * @param blockType New block type ID
+     * @param block New block
      */
-    public void updateBlock(int x, int y, int z, byte blockType) {
-        if (chunkData.setBlock(x, y, z, blockType)) {
+    public void updateBlock(int x, int y, int z, Block block) {
+        if (chunkData.setBlock(x, y, z, block)) {
             this.dirty = true;
             // TODO: If block is on a chunk border, mark neighbor ClientChunks as dirty too!
         }

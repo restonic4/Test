@@ -1,14 +1,21 @@
-package com.chaotic_loom.game;
+package com.chaotic_loom.game.rendering.components;
 
+import com.chaotic_loom.game.registries.Registry;
+import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.mesh.Cube;
 import com.chaotic_loom.game.rendering.mesh.Mesh;
 import com.chaotic_loom.game.rendering.texture.Texture;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
+import com.chaotic_loom.game.world.ChunkData;
+import com.chaotic_loom.game.world.components.Block;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import static com.chaotic_loom.game.core.util.SharedConstants.*;
 
 public final class ChunkMesher {
 
@@ -60,14 +67,16 @@ public final class ChunkMesher {
         MeshBuildContext ctx = new MeshBuildContext(chunkData, textureManager /*, world */);
 
         // Iterate through blocks within the chunk
-        for (int x = 0; x < BlockTypes.CHUNK_WIDTH; x++) {
-            for (int y = 0; y < BlockTypes.CHUNK_HEIGHT; y++) {
-                for (int z = 0; z < BlockTypes.CHUNK_DEPTH; z++) {
+        for (int x = 0; x < CHUNK_WIDTH; x++) {
+            for (int y = 0; y < CHUNK_HEIGHT; y++) {
+                for (int z = 0; z < CHUNK_DEPTH; z++) {
+                    Block currentBlock = ctx.chunkData.getBlock(x, y, z);
 
-                    byte currentBlockType = ctx.chunkData.getBlock(x, y, z);
-                    if (currentBlockType == BlockTypes.BLOCK_AIR) continue;
+                    if (currentBlock == Blocks.AIR) continue;
 
-                    boolean currentIsOpaque = BlockTypes.isBlockOpaque(currentBlockType);
+                    boolean currentIsOpaque = !currentBlock.getSettings().isTransparent();
+
+                    System.out.println(currentBlock);
 
                     // Define neighbour RELATIVE offsets for cleaner loop
                     int[][] neighborOffsets = {
@@ -79,23 +88,24 @@ public final class ChunkMesher {
                         int nx = x + offset[0];
                         int ny = y + offset[1];
                         int nz = z + offset[2];
-                        int faceIndex = offset[3];
+                        byte faceIndex = (byte) offset[3];
 
                         // Use chunkData's getBlock to handle boundary checks simply (returns AIR if out)
                         // For seamless meshing, a WorldAccessor would be needed here to query actual neighbor chunks.
-                        byte neighborBlockType = ctx.chunkData.getBlock(nx, ny, nz);
-                        boolean neighborIsOpaque = BlockTypes.isBlockOpaque(neighborBlockType);
+                        Block neighborBlock = ctx.chunkData.getBlock(nx, ny, nz);
+
+                        boolean neighborIsOpaque = !neighborBlock.getSettings().isTransparent();
 
                         // Visibility Rule (Occlusion check reverted as requested)
                         boolean shouldRenderFace = false;
                         if (currentIsOpaque && !neighborIsOpaque) {
                             shouldRenderFace = true;
-                        } else if (!currentIsOpaque && neighborBlockType == BlockTypes.BLOCK_AIR) {
+                        } else if (!currentIsOpaque && neighborBlock == Blocks.AIR) {
                             shouldRenderFace = true;
                         }
 
                         if (shouldRenderFace) {
-                            boolean success = addFace(ctx, currentIsOpaque, x, y, z, currentBlockType, faceIndex);
+                            boolean success = addFace(ctx, currentIsOpaque, x, y, z, currentBlock, faceIndex);
                             if (!success) {
                                 System.err.println("ChunkMesher: Failed during addFace at " + x + "," + y + "," + z + ". Aborting mesh generation for this chunk.");
                                 return null; // Critical error
@@ -134,12 +144,12 @@ public final class ChunkMesher {
     /**
      * Adds the vertex data for a single face to the appropriate lists in the build context.
      */
-    private static boolean addFace(MeshBuildContext ctx, boolean isOpaqueFace, int x, int y, int z, byte blockType, int faceIndex) {
+    private static boolean addFace(MeshBuildContext ctx, boolean isOpaqueFace, int x, int y, int z, Block block, byte faceIndex) {
         // 1. Get Texture Atlas Info
-        TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlock(ctx, blockType, faceIndex);
+        TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlock(ctx, block, faceIndex);
         if (atlasInfo == null) {
             // Attempt to use fallback texture
-            System.err.printf("ChunkMesher: Missing TextureAtlasInfo for block %d, face %d at [%d,%d,%d]. Using fallback.%n", blockType, faceIndex, x, y, z);
+            System.err.printf("ChunkMesher: Missing TextureAtlasInfo for block " + block + ", face %d at [%d,%d,%d]. Using fallback.%n", faceIndex, x, y, z);
             atlasInfo = ctx.textureManager.getTextureInfo("/textures/debug_missing.png");
             if (atlasInfo == null) {
                 System.err.println("ChunkMesher: FATAL - Fallback texture '/textures/debug_missing.png' not found in TextureManager!");
@@ -221,8 +231,8 @@ public final class ChunkMesher {
     /**
      * Looks up the TextureAtlasInfo using the TextureManager based on block type and face.
      */
-    private static TextureAtlasInfo getTextureAtlasInfoForBlock(MeshBuildContext ctx, byte blockType, int faceIndex) {
-        String texturePath = getTexturePathForBlockFace(blockType, faceIndex);
+    private static TextureAtlasInfo getTextureAtlasInfoForBlock(MeshBuildContext ctx, Block block, byte faceIndex) {
+        String texturePath = getTexturePathForBlockFace(block, faceIndex);
         if (texturePath == null) {
             // Logged within addFace now if fallback is used
             return null;
@@ -234,39 +244,12 @@ public final class ChunkMesher {
     /**
      * Determines the texture resource path for a specific face of a block type.
      * This defines the visual appearance mapping.
+     *
+     * Face indices: 0:Front(+Z), 1:Back(-Z), 2:Top(+Y), 3:Bottom(-Y), 4:Right(+X), 5:Left(-X)
      */
-    private static String getTexturePathForBlockFace(byte blockType, int faceIndex) {
-        switch (blockType) {
-            case BlockTypes.BLOCK_DIRT:
-                return "/textures/dirt.png";
-            case BlockTypes.BLOCK_STONE:
-                return "/textures/stone.png";
-            case BlockTypes.BLOCK_GRASS:
-                // Face indices: 0:Front(+Z), 1:Back(-Z), 2:Top(+Y), 3:Bottom(-Y), 4:Right(+X), 5:Left(-X)
-                switch (faceIndex) {
-                    case 2:  return "/textures/dirt.png";  // Top face (Placeholder, use correct path)
-                    case 3:  return "/textures/dirt.png";       // Bottom face is dirt
-                    default: return "/textures/dirt.png"; // Side faces (Placeholder)
-                    // Make sure you have these textures: grass_top.png, dirt.png, grass_side.png
-                }
-            case BlockTypes.BLOCK_WOOD_LOG:
-                switch (faceIndex) {
-                    case 2: // Top face
-                    case 3: // Bottom face
-                        return "/textures/wood.png"; // Placeholder
-                    default: // Side faces
-                        return "/textures/wood.png"; // Placeholder
-                    // Make sure you have: wood_log_top.png, wood_log_side.png
-                }
-            case BlockTypes.BLOCK_GLASS:
-                return "/textures/glass.png";
-            default:
-                // Log once in addFace if fallback needed, no need to log here too.
-                // System.err.println("ChunkMesher: Undefined texture path for block type: " + blockType);
-                return null; // Return null to indicate missing mapping, fallback handled in addFace
-        }
-        // NOTE: Replace placeholder paths above (grass_top, grass_side, wood_log_top, wood_log_side)
-        // with your actual texture file paths if they differ.
+    private static String getTexturePathForBlockFace(Block block, byte faceIndex) {
+        Map<Block.Face, String> textures = block.getSettings().getFaceProperties().getTextures();
+        return textures.get(block.getSettings().getFaceProperties().getFaceFromIndex(faceIndex));
     }
 
     // --- Array Conversion Helpers ---

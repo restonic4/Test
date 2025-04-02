@@ -1,10 +1,8 @@
 package com.chaotic_loom.game.registries.built_in;
 
-import com.chaotic_loom.game.components.Block;
+import com.chaotic_loom.game.world.components.Block;
 import com.chaotic_loom.game.core.Environment;
 import com.chaotic_loom.game.core.util.SharedConstants;
-import com.chaotic_loom.game.networking.packets.LoginPacket;
-import com.chaotic_loom.game.networking.packets.PingPacket;
 import com.chaotic_loom.game.registries.Registry;
 import com.chaotic_loom.game.registries.components.Identifier;
 import com.chaotic_loom.game.registries.components.Registration;
@@ -12,9 +10,11 @@ import com.chaotic_loom.game.registries.components.Registration;
 @Registration(environment = Environment.COMMON)
 public class Blocks {
     public static Block AIR;
+    public static Block GLASS;
     public static Block DIRT;
     public static Block WOOD;
     public static Block STONE;
+    public static Block LOG;
 
     public static void register() {
         AIR = Registry.register(
@@ -28,6 +28,22 @@ public class Blocks {
                 )
         );
 
+        GLASS = Registry.register(
+                RegistryKeys.BLOCK,
+                new Identifier(SharedConstants.NAMESPACE, "glass"),
+                new Block(
+                        new Block.Settings.Builder()
+                                .setTransparent(true)
+                                .setCollider(true)
+                                .setFaceProperties(
+                                        new Block.FaceProperties.Builder()
+                                                .setTextures("textures/glass.png")
+                                                .build()
+                                )
+                                .build()
+                )
+        );
+
         DIRT = Registry.register(
                 RegistryKeys.BLOCK,
                 new Identifier(SharedConstants.NAMESPACE, "dirt"),
@@ -37,7 +53,7 @@ public class Blocks {
                                 .setCollider(true)
                                 .setFaceProperties(
                                         new Block.FaceProperties.Builder()
-                                                .setTextures("dirt")
+                                                .setTextures("textures/dirt.png")
                                                 .build()
                                 )
                                 .build()
@@ -53,7 +69,7 @@ public class Blocks {
                                 .setCollider(true)
                                 .setFaceProperties(
                                         new Block.FaceProperties.Builder()
-                                                .setTextures("wood")
+                                                .setTextures("textures/wood.png")
                                                 .build()
                                 )
                                 .build()
@@ -69,9 +85,26 @@ public class Blocks {
                                 .setCollider(true)
                                 .setFaceProperties(
                                         new Block.FaceProperties.Builder()
-                                                .setTextures("stone")
+                                                .setTextures("textures/stone.png")
                                                 .build()
                                 )
+                                .build()
+                )
+        );
+
+        LOG = Registry.register(
+                RegistryKeys.BLOCK,
+                new Identifier(SharedConstants.NAMESPACE, "log"),
+                new Block(
+                        new Block.Settings.Builder()
+                                .setTransparent(false)
+                                .setCollider(true)
+                                .setFaceProperties(
+                                        new Block.FaceProperties.Builder()
+                                                .setTextures("textures/log.png")
+                                                .build()
+                                )
+                                .allowAllDirections()
                                 .build()
                 )
         );

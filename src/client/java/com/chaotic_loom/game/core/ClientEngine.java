@@ -1,9 +1,9 @@
 package com.chaotic_loom.game.core;
 
-import com.chaotic_loom.game.BlockTypes;
-import com.chaotic_loom.game.ChunkData;
-import com.chaotic_loom.game.ClientChunk;
-import com.chaotic_loom.game.components.ClientGameObject;
+import com.chaotic_loom.game.registries.built_in.Blocks;
+import com.chaotic_loom.game.world.ChunkData;
+import com.chaotic_loom.game.world.ClientChunk;
+import com.chaotic_loom.game.world.components.ClientGameObject;
 import com.chaotic_loom.game.core.utils.ClientConstants;
 import com.chaotic_loom.game.events.WindowEvents;
 import com.chaotic_loom.game.networking.ClientNetworkingContext;
@@ -19,6 +19,7 @@ import org.joml.Vector3f;
 
 import java.util.*;
 
+import static com.chaotic_loom.game.core.util.SharedConstants.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 public class ClientEngine extends AbstractEngine {
@@ -121,26 +122,26 @@ public class ClientEngine extends AbstractEngine {
 
         // 3. Populate ChunkData with blocks
         System.out.println("Populating ChunkData...");
-        for (int x = 0; x < BlockTypes.CHUNK_WIDTH; x++) {
-            for (int z = 0; z < BlockTypes.CHUNK_DEPTH; z++) {
+        for (int x = 0; x < CHUNK_WIDTH; x++) {
+            for (int z = 0; z < CHUNK_DEPTH; z++) {
                 // Create a base layer
-                manualChunkData.setBlock(x, 0, z, BlockTypes.BLOCK_STONE);
+                manualChunkData.setBlock(x, 0, z, Blocks.STONE);
 
                 // Add some features on layer 1
-                if (x == 0 || x == BlockTypes.CHUNK_WIDTH - 1 || z == 0 || z == BlockTypes.CHUNK_DEPTH - 1) {
-                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_WOOD_LOG); // Border of logs
+                if (x == 0 || x == CHUNK_WIDTH - 1 || z == 0 || z == CHUNK_DEPTH - 1) {
+                    manualChunkData.setBlock(x, 1, z, Blocks.WOOD); // Border of logs
                 } else if (x > 5 && x < 10 && z > 5 && z < 10) {
-                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_GLASS); // Central glass area
+                    manualChunkData.setBlock(x, 1, z, Blocks.GLASS); // Central glass area
                 } else {
-                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_DIRT); // Fill with dirt
+                    manualChunkData.setBlock(x, 1, z, Blocks.DIRT); // Fill with dirt
                 }
             }
         }
         // Add a small pillar
-        manualChunkData.setBlock(2, 1, 2, BlockTypes.BLOCK_STONE);
-        manualChunkData.setBlock(2, 2, 2, BlockTypes.BLOCK_STONE);
-        manualChunkData.setBlock(2, 3, 2, BlockTypes.BLOCK_GLASS);
-        manualChunkData.setBlock(2, 4, 2, BlockTypes.BLOCK_STONE);
+        manualChunkData.setBlock(2, 1, 2, Blocks.STONE);
+        manualChunkData.setBlock(2, 2, 2, Blocks.STONE);
+        manualChunkData.setBlock(2, 3, 2, Blocks.GLASS);
+        manualChunkData.setBlock(2, 4, 2, Blocks.STONE);
         System.out.println("Population complete.");
 
         // 4. Create the ClientChunk wrapper
