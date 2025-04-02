@@ -1,5 +1,8 @@
 package com.chaotic_loom.game.core;
 
+import com.chaotic_loom.game.BlockTypes;
+import com.chaotic_loom.game.ChunkData;
+import com.chaotic_loom.game.ClientChunk;
 import com.chaotic_loom.game.components.ClientGameObject;
 import com.chaotic_loom.game.core.utils.ClientConstants;
 import com.chaotic_loom.game.events.WindowEvents;
@@ -79,7 +82,7 @@ public class ClientEngine extends AbstractEngine {
             gameObjects.add(cube);
         }
 
-        ChunkMesh.ChunkMeshBuildResult chunkBuildResult = ChunkMesh.test(textureManager);
+        /*ChunkMesh.ChunkMeshBuildResult chunkBuildResult = ChunkMesh.test(textureManager);
 
         if (chunkBuildResult != null && chunkBuildResult.atlasTexture() != null) {
             Texture chunkAtlasTexture = chunkBuildResult.atlasTexture();
@@ -109,7 +112,91 @@ public class ClientEngine extends AbstractEngine {
 
         } else {
             getLogger().error("Failed to build and create chunk game object(s) for testing.");
+        }*/
+        int testChunkX = 1;
+        int testChunkY = 0;
+        int testChunkZ = 1;
+        ChunkData manualChunkData = new ChunkData(testChunkX, testChunkY, testChunkZ);
+        System.out.println("Created ChunkData at: " + testChunkX + ", " + testChunkY + ", " + testChunkZ);
+
+        // 3. Populate ChunkData with blocks
+        System.out.println("Populating ChunkData...");
+        for (int x = 0; x < BlockTypes.CHUNK_WIDTH; x++) {
+            for (int z = 0; z < BlockTypes.CHUNK_DEPTH; z++) {
+                // Create a base layer
+                manualChunkData.setBlock(x, 0, z, BlockTypes.BLOCK_STONE);
+
+                // Add some features on layer 1
+                if (x == 0 || x == BlockTypes.CHUNK_WIDTH - 1 || z == 0 || z == BlockTypes.CHUNK_DEPTH - 1) {
+                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_WOOD_LOG); // Border of logs
+                } else if (x > 5 && x < 10 && z > 5 && z < 10) {
+                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_GLASS); // Central glass area
+                } else {
+                    manualChunkData.setBlock(x, 1, z, BlockTypes.BLOCK_DIRT); // Fill with dirt
+                }
+            }
         }
+        // Add a small pillar
+        manualChunkData.setBlock(2, 1, 2, BlockTypes.BLOCK_STONE);
+        manualChunkData.setBlock(2, 2, 2, BlockTypes.BLOCK_STONE);
+        manualChunkData.setBlock(2, 3, 2, BlockTypes.BLOCK_GLASS);
+        manualChunkData.setBlock(2, 4, 2, BlockTypes.BLOCK_STONE);
+        System.out.println("Population complete.");
+
+        // 4. Create the ClientChunk wrapper
+        // If your mesher needs neighbor data, you'd pass a WorldAccessor here too.
+        ClientChunk manualClientChunk = new ClientChunk(manualChunkData, textureManager /*, worldAccessor */);
+        System.out.println("Created ClientChunk wrapper.");
+
+        // 5. Trigger mesh generation
+        System.out.println("Requesting mesh rebuild...");
+        manualClientChunk.rebuildMeshIfNeeded(); // This internally calls ChunkMesher
+        System.out.println("Mesh rebuild process finished.");
+
+        // 6. Create GameObject(s) from the result
+        Texture atlas = manualClientChunk.getAtlasTexture();
+        Mesh opaqueMesh = manualClientChunk.getMeshOpaque();
+        Mesh transparentMesh = manualClientChunk.getMeshTransparent();
+        Vector3f worldPos = manualClientChunk.getWorldPosition(); // Get calculated world pos
+
+        if (atlas == null && (opaqueMesh != null || transparentMesh != null)) {
+            System.err.println("Warning: Meshes generated but atlas texture reference is missing!");
+            // Handle this case - maybe use a default atlas?
+        }
+
+        // Create placeholder AtlasInfo - only the 'atlasTexture' field really matters
+        // for the existing renderer batching when using pre-meshed chunks.
+        TextureAtlasInfo placeholderAtlasInfo = (atlas != null)
+                ? new TextureAtlasInfo(atlas, 0, 0, 1, 1)
+                : null; // Or handle error if atlas is null but meshes exist
+
+        if (placeholderAtlasInfo != null) {
+            // Add Opaque GameObject if mesh exists
+            if (opaqueMesh != null) {
+                ClientGameObject goOpaque = new ClientGameObject(opaqueMesh, placeholderAtlasInfo);
+                goOpaque.getTransform().setPosition(worldPos);
+                gameObjects.add(goOpaque); // Add opaque first
+                System.out.println("Added Opaque GameObject for manual chunk.");
+            } else {
+                System.out.println("Manual chunk has no opaque geometry.");
+            }
+
+            // Add Transparent GameObject if mesh exists
+            if (transparentMesh != null) {
+                ClientGameObject goTransparent = new ClientGameObject(transparentMesh, placeholderAtlasInfo);
+                goTransparent.getTransform().setPosition(worldPos);
+                gameObjects.add(goTransparent); // Add transparent last
+                System.out.println("Added Transparent GameObject for manual chunk.");
+            } else {
+                System.out.println("Manual chunk has no transparent geometry.");
+            }
+        } else if (opaqueMesh != null || transparentMesh != null) {
+            System.err.println("Cannot create GameObjects for manual chunk - Atlas Texture is missing!");
+        } else {
+            System.out.println("Manual chunk resulted in no geometry.");
+        }
+        System.out.println("--- Manual Test Chunk Creation Finished ---");
+
 
         //TempServer.joinServer(this);
 
