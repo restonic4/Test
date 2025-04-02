@@ -80,17 +80,35 @@ public class ClientEngine extends AbstractEngine {
         }
 
         ChunkMesh.ChunkMeshBuildResult chunkBuildResult = ChunkMesh.test(textureManager);
-        if (chunkBuildResult != null && chunkBuildResult.mesh() != null && chunkBuildResult.atlasTexture() != null) {
-            Mesh chunkMesh = chunkBuildResult.mesh();
-            Texture chunkAtlasTexture = chunkBuildResult.atlasTexture();
-            TextureAtlasInfo chunkAtlasInfo = new TextureAtlasInfo(chunkAtlasTexture, 0, 0, 1, 1);
 
-            ClientGameObject chunkGameObject = new ClientGameObject(chunkMesh, chunkAtlasInfo);
-            chunkGameObject.getTransform().setPosition(5, 0, 0); // Position the chunk
-            gameObjects.add(chunkGameObject);
+        if (chunkBuildResult != null && chunkBuildResult.atlasTexture() != null) {
+            Texture chunkAtlasTexture = chunkBuildResult.atlasTexture();
+            // Use a dummy AtlasInfo just to pass the atlas texture to the renderer batching
+            TextureAtlasInfo chunkAtlasInfo = new TextureAtlasInfo(chunkAtlasTexture, 0, 0, 1, 1);
+            Vector3f chunkPosition = new Vector3f(5, 0, 0); // Store position
+
+            // Create GameObject for the Opaque mesh (if it exists)
+            if (chunkBuildResult.meshOpaque() != null) {
+                Mesh opaqueMesh = chunkBuildResult.meshOpaque();
+                ClientGameObject chunkGameObjectOpaque = new ClientGameObject(opaqueMesh, chunkAtlasInfo);
+                chunkGameObjectOpaque.getTransform().setPosition(chunkPosition);
+                // *** Add Opaque GO to the list *first* ***
+                gameObjects.add(chunkGameObjectOpaque);
+                getLogger().info("Created Opaque Chunk GameObject.");
+            }
+
+            // Create GameObject for the Transparent mesh (if it exists)
+            if (chunkBuildResult.meshTransparent() != null) {
+                Mesh transparentMesh = chunkBuildResult.meshTransparent();
+                ClientGameObject chunkGameObjectTransparent = new ClientGameObject(transparentMesh, chunkAtlasInfo);
+                chunkGameObjectTransparent.getTransform().setPosition(chunkPosition);
+                // *** Add Transparent GO to the list *after* opaque ones ***
+                gameObjects.add(chunkGameObjectTransparent);
+                getLogger().info("Created Transparent Chunk GameObject.");
+            }
 
         } else {
-            getLogger().error("Failed to build and create chunk game object for testing.");
+            getLogger().error("Failed to build and create chunk game object(s) for testing.");
         }
 
         //TempServer.joinServer(this);

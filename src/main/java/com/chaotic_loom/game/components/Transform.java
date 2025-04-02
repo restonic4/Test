@@ -54,6 +54,11 @@ public class Transform {
 
     // Setters
 
+    public void setPosition(Vector3f position) {
+        this.position.set(position.x, position.y, position.z);
+        setDirty();
+    }
+
     public void setPosition(float x, float y, float z) {
         this.position.set(x, y, z);
         setDirty();

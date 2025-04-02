@@ -4,6 +4,7 @@ import com.chaotic_loom.game.rendering.mesh.Cube;
 import com.chaotic_loom.game.rendering.mesh.Mesh;
 import com.chaotic_loom.game.rendering.texture.Texture;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,16 +23,25 @@ public class ChunkMesh {
     public static final byte BLOCK_STONE = 2;
     public static final byte BLOCK_GRASS = 3; // Example: Grass might have different top/side/bottom
     public static final byte BLOCK_WOOD_LOG = 4; // Example: Logs often have different top/side
+    public static final byte BLOCK_GLASS = 5;
     // Add more block types as needed...
 
     // Simple block data storage using block type IDs defined above.
     private byte[][][] blocks;
 
-    // Lists to accumulate mesh data during build
-    private List<Float> positions;
-    private List<Float> uvs;
-    private List<Float> normals;
-    private List<Integer> indices;
+    // --- Geometry Lists (Duplicated for Opaque and Transparent) ---
+    private List<Float> positions_opaque;
+    private List<Float> uvs_opaque;
+    private List<Float> normals_opaque;
+    private List<Integer> indices_opaque;
+    private int currentVertexOffset_opaque = 0;
+
+    private List<Float> positions_transparent;
+    private List<Float> uvs_transparent;
+    private List<Float> normals_transparent;
+    private List<Integer> indices_transparent;
+    private int currentVertexOffset_transparent = 0;
+    // --- End Geometry Lists ---
 
     // We need the texture manager to look up UV coordinates for block types
     private TextureManager textureManager;
@@ -42,17 +52,27 @@ public class ChunkMesh {
      * Holds the result of building the mesh.
      * Includes the mesh itself and the atlas texture it uses.
      */
-    public record ChunkMeshBuildResult(Mesh mesh, Texture atlasTexture) {}
+    public record ChunkMeshBuildResult(
+            @Nullable Mesh meshOpaque,
+            @Nullable Mesh meshTransparent,
+            @Nullable Texture atlasTexture // Single atlas assumed
+    ) {}
 
     public ChunkMesh(TextureManager textureManager) {
-        // Require TextureManager for UV lookups
         Objects.requireNonNull(textureManager, "TextureManager cannot be null for ChunkMesh");
         this.textureManager = textureManager;
-        blocks = new byte[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH]; // Defaults to 0 (air)
-        positions = new ArrayList<>();
-        uvs = new ArrayList<>();
-        normals = new ArrayList<>();
-        indices = new ArrayList<>();
+        blocks = new byte[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
+
+        // Initialize both sets of lists
+        positions_opaque = new ArrayList<>();
+        uvs_opaque = new ArrayList<>();
+        normals_opaque = new ArrayList<>();
+        indices_opaque = new ArrayList<>();
+
+        positions_transparent = new ArrayList<>();
+        uvs_transparent = new ArrayList<>();
+        normals_transparent = new ArrayList<>();
+        indices_transparent = new ArrayList<>();
     }
 
     /**
@@ -87,6 +107,39 @@ public class ChunkMesh {
                 z < 0 || z >= CHUNK_DEPTH;
     }
 
+    private boolean isBlockOpaque(byte blockType) {
+        switch (blockType) {
+            case BLOCK_AIR:
+            case BLOCK_GLASS: // Glass is not opaque
+                return false;
+            case BLOCK_DIRT:
+            case BLOCK_STONE:
+            case BLOCK_GRASS:
+            case BLOCK_WOOD_LOG:
+            default: // Assume other defined blocks are opaque
+                return true;
+        }
+    }
+
+    /**
+     * Checks if a block at the given coordinates is fully surrounded by opaque blocks.
+     * Used to optimize away hidden transparent blocks.
+     * Assumes the block at (x, y, z) itself is NOT air.
+     * @param x block X
+     * @param y block Y
+     * @param z block Z
+     * @return true if all 6 neighbours are opaque, false otherwise.
+     */
+    private boolean isBlockFullyOccluded(int x, int y, int z) {
+        // Check all 6 neighbours
+        return isBlockOpaque(getBlock(x, y, z + 1)) &&
+                isBlockOpaque(getBlock(x, y, z - 1)) &&
+                isBlockOpaque(getBlock(x, y + 1, z)) &&
+                isBlockOpaque(getBlock(x, y - 1, z)) &&
+                isBlockOpaque(getBlock(x + 1, y, z)) &&
+                isBlockOpaque(getBlock(x - 1, y, z));
+    }
+
     /**
      * Generates the Mesh object based on the current block data.
      * Only visible faces between solid blocks and air are included.
@@ -96,14 +149,14 @@ public class ChunkMesh {
      * or null if the chunk is empty or an error occurs.
      */
     public ChunkMeshBuildResult buildMesh() {
-        // Clear previous mesh data
-        positions.clear();
-        uvs.clear();
-        normals.clear();
-        indices.clear();
-        atlasTexture = null; // Reset the atlas texture reference for this build
+        // --- Clear previous mesh data for both sets ---
+        positions_opaque.clear(); uvs_opaque.clear(); normals_opaque.clear(); indices_opaque.clear();
+        positions_transparent.clear(); uvs_transparent.clear(); normals_transparent.clear(); indices_transparent.clear();
+        currentVertexOffset_opaque = 0;
+        currentVertexOffset_transparent = 0;
+        atlasTexture = null;
+        // --- End Clear ---
 
-        int currentVertexOffset = 0;
 
         // Iterate through each block position in the chunk
         for (int x = 0; x < CHUNK_WIDTH; x++) {
@@ -112,155 +165,183 @@ public class ChunkMesh {
 
                     byte currentBlockType = blocks[x][y][z];
 
-                    // If the current block is air, skip it
+                    // Skip Air blocks
                     if (currentBlockType == BLOCK_AIR) {
                         continue;
                     }
 
-                    // --- Check adjacent blocks to determine face visibility ---
-                    // A face is visible if the adjacent block is air (BLOCK_AIR)
+                    boolean currentIsOpaque = isBlockOpaque(currentBlockType);
 
-                    // Front face (+Z) - Check block at Z+1
-                    if (getBlock(x, y, z + 1) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 0, currentVertexOffset)) { // Face index 0 = Front
-                            currentVertexOffset += 4; // Each face adds 4 vertices
-                        } else return null; // Error adding face
+                    // --- Optimization: Cull fully occluded transparent blocks ---
+                    if (!currentIsOpaque) {
+                        if (isBlockFullyOccluded(x, y, z)) {
+                            continue; // Skip this transparent block entirely
+                        }
                     }
-                    // Back face (-Z) - Check block at Z-1
-                    if (getBlock(x, y, z - 1) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 1, currentVertexOffset)) { // Face index 1 = Back
-                            currentVertexOffset += 4;
-                        } else return null;
-                    }
-                    // Top face (+Y) - Check block at Y+1
-                    if (getBlock(x, y + 1, z) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 2, currentVertexOffset)) { // Face index 2 = Top
-                            currentVertexOffset += 4;
-                        } else return null;
-                    }
-                    // Bottom face (-Y) - Check block at Y-1
-                    if (getBlock(x, y - 1, z) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 3, currentVertexOffset)) { // Face index 3 = Bottom
-                            currentVertexOffset += 4;
-                        } else return null;
-                    }
-                    // Right face (+X) - Check block at X+1
-                    if (getBlock(x + 1, y, z) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 4, currentVertexOffset)) { // Face index 4 = Right
-                            currentVertexOffset += 4;
-                        } else return null;
-                    }
-                    // Left face (-X) - Check block at X-1
-                    if (getBlock(x - 1, y, z) == BLOCK_AIR) {
-                        if (addFace(x, y, z, currentBlockType, 5, currentVertexOffset)) { // Face index 5 = Left
-                            currentVertexOffset += 4;
-                        } else return null;
-                    }
-                }
-            }
+                    // --- End Occlusion Check ---
+
+
+                    // --- Check Neighbours for Face Visibility ---
+                    // Define neighbour offsets for cleaner loop
+                    int[][] neighbors = {
+                            {x, y, z + 1, 0}, // Front (+Z), Face Index 0
+                            {x, y, z - 1, 1}, // Back (-Z), Face Index 1
+                            {x, y + 1, z, 2}, // Top (+Y), Face Index 2
+                            {x, y - 1, z, 3}, // Bottom (-Y), Face Index 3
+                            {x + 1, y, z, 4}, // Right (+X), Face Index 4
+                            {x - 1, y, z, 5}  // Left (-X), Face Index 5
+                    };
+
+                    for (int[] neighborInfo : neighbors) {
+                        int nx = neighborInfo[0];
+                        int ny = neighborInfo[1];
+                        int nz = neighborInfo[2];
+                        int faceIndex = neighborInfo[3];
+
+                        byte neighborBlockType = getBlock(nx, ny, nz);
+                        boolean neighborIsOpaque = isBlockOpaque(neighborBlockType);
+
+                        // --- Visibility Rule ---
+                        // Render face of currentBlock facing neighborBlock IF:
+                        // 1. current is Opaque AND neighbor is NOT Opaque
+                        // 2. OR current is NOT Opaque AND neighbor is AIR
+                        boolean shouldRenderFace = false;
+                        if (currentIsOpaque && !neighborIsOpaque) {
+                            shouldRenderFace = true;
+                        } else if (!currentIsOpaque && neighborBlockType == BLOCK_AIR) {
+                            shouldRenderFace = true;
+                        }
+                        // Add special case? Glass vs Glass face removal already handled by rule 1?
+                        // If current is Glass (!Opaque) and neighbor is Glass (!Opaque), rule 1 fails.
+                        // If current is Glass (!Opaque) and neighbor is AIR, rule 2 applies (render). OK.
+                        // If current is Stone (Opaque) and neighbor is Glass (!Opaque), rule 1 applies (render). OK.
+
+                        if (shouldRenderFace) {
+                            // Add face to the correct list (opaque or transparent)
+                            boolean success = addFace(currentIsOpaque, x, y, z, currentBlockType, faceIndex);
+                            if (!success) {
+                                System.err.println("Error adding face for block at " + x + "," + y + "," + z);
+                                return null; // Critical error during mesh generation
+                            }
+                        }
+                    } // End neighbour check loop
+                } // End z loop
+            } // End y loop
+        } // End x loop
+
+
+        // --- Build Mesh Objects ---
+        Mesh meshOpaque = null;
+        if (!positions_opaque.isEmpty()) {
+            float[] pos = toFloatArray(positions_opaque);
+            float[] uv = toFloatArray(uvs_opaque);
+            float[] norm = toFloatArray(normals_opaque);
+            int[] idx = toIntArray(indices_opaque);
+            meshOpaque = new Mesh(pos, uv, norm, idx, 100);
         }
 
-        // If no vertices were added, return null
-        if (positions.isEmpty() || atlasTexture == null) {
-            return null; // Or create a special empty Mesh instance/result
+        Mesh meshTransparent = null;
+        if (!positions_transparent.isEmpty()) {
+            float[] pos = toFloatArray(positions_transparent);
+            float[] uv = toFloatArray(uvs_transparent);
+            float[] norm = toFloatArray(normals_transparent);
+            int[] idx = toIntArray(indices_transparent);
+            meshTransparent = new Mesh(pos, uv, norm, idx, 100);
+        }
+        // --- End Build Mesh Objects ---
+
+
+        // Return null if both are empty (or only if atlasTexture is still null?)
+        if (meshOpaque == null && meshTransparent == null) {
+            return null; // Entirely empty chunk or only fully occluded blocks
         }
 
-        // Convert lists to arrays for Mesh constructor
-        float[] posArray = toFloatArray(positions);
-        float[] uvArray = toFloatArray(uvs);
-        float[] normArray = toFloatArray(normals);
-        int[] idxArray = toIntArray(indices);
 
-        // Create the actual Mesh object
-        // The texture ID argument in the Mesh constructor might not be needed
-        // if the renderer gets the texture from the TextureAtlasInfo / RenderBatch.
-        // Assuming Mesh constructor ONLY needs vertex data now.
-        // Adjust the Mesh constructor if it still expects a texture ID.
-        Mesh mesh = new Mesh(posArray, uvArray, normArray, idxArray, 100);
-
-        // Return the Mesh and the Atlas Texture it uses
-        return new ChunkMeshBuildResult(mesh, atlasTexture);
+        // Return the result containing both meshes (potentially null) and the atlas
+        return new ChunkMeshBuildResult(meshOpaque, meshTransparent, atlasTexture);
     }
 
     /**
-     * Adds the vertex, UV, normal, and index data for a specific face
-     * of a block at world coordinates (x, y, z). Calculates UVs based on block type.
+     * Adds face data to the appropriate list (opaque or transparent).
      *
-     * @param x Block's X position within the chunk
-     * @param y Block's Y position within the chunk
-     * @param z Block's Z position within the chunk
-     * @param blockType The type ID of the block being added.
-     * @param faceIndex Index of the face (0:Front, 1:Back, 2:Top, 3:Bottom, 4:Right, 5:Left)
-     * @param baseVertexIndex The starting index for the vertices of this face.
-     * @return true if the face was added successfully, false if texture info was missing.
+     * @param isOpaqueFace True if the block type is opaque, false if transparent.
+     * @param x Block's X position
+     * @param y Block's Y position
+     * @param z Block's Z position
+     * @param blockType The type ID of the block.
+     * @param faceIndex Index of the face (0:Front, ..., 5:Left)
+     * @return true if successful, false on critical error (e.g., atlas mixing).
      */
-    private boolean addFace(int x, int y, int z, byte blockType, int faceIndex, int baseVertexIndex) {
-        // 1. Get Texture Atlas Info for this specific block type and face
+    private boolean addFace(boolean isOpaqueFace, int x, int y, int z, byte blockType, int faceIndex) {
+        // 1. Get Texture Atlas Info (same as before)
         TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlock(blockType, faceIndex);
-
         if (atlasInfo == null) {
-            System.err.println("Missing TextureAtlasInfo for block type " + blockType + ", face " + faceIndex + ". Skipping face.");
-            // Optionally, use a default "missing texture" instead of skipping
-            atlasInfo = textureManager.getTextureInfo("/textures/debug_missing.png"); // Example fallback
+            System.err.println("Missing TextureAtlasInfo for block " + blockType + ", face " + faceIndex + ". Using fallback.");
+            atlasInfo = textureManager.getTextureInfo("/textures/debug_missing.png");
             if (atlasInfo == null) {
                 System.err.println("FATAL: Missing texture fallback /textures/debug_missing.png not found!");
-                return false; // Critical error if even the fallback is missing
+                return false; // Critical if fallback is missing
             }
         }
 
-        // 2. Store/Verify the Atlas Texture (ensure all faces in a chunk use the same atlas)
+        // 2. Store/Verify Atlas Texture (same as before)
         if (this.atlasTexture == null) {
             this.atlasTexture = atlasInfo.atlasTexture();
         } else if (this.atlasTexture != atlasInfo.atlasTexture()) {
-            // This should ideally not happen if TextureManager puts all block textures on one atlas.
-            // If you support multiple atlases for chunks, this logic needs expansion.
-            System.err.println("CRITICAL ERROR: Chunk mesh generation encountered multiple texture atlases! Block: " + blockType);
-            return false; // Cannot build mesh with faces from different atlases easily
+            System.err.println("CRITICAL ERROR: Chunk mesh generation encountered multiple texture atlases!");
+            return false;
         }
 
-        // 3. Calculate start indices within Cube's static data
-        int posStartIndex = faceIndex * 4 * 3; // 4 vertices per face, 3 floats per vertex pos
-        int uvStartIndex = faceIndex * 4 * 2;  // 4 vertices per face, 2 floats per vertex uv
-        int normStartIndex = faceIndex * 4 * 3;// 4 vertices per face, 3 floats per vertex normal
+        // 3. Calculate start indices in Cube static data (same as before)
+        int posStartIndex = faceIndex * 12; // faceIndex * 4 vertices * 3 floats
+        int uvStartIndex = faceIndex * 8;   // faceIndex * 4 vertices * 2 floats
+        int normStartIndex = faceIndex * 12; // faceIndex * 4 vertices * 3 floats
 
-        // 4. Add the 4 vertices for this face
+        // 4. Determine target lists and vertex offset
+        List<Float> targetPositions = isOpaqueFace ? positions_opaque : positions_transparent;
+        List<Float> targetUvs = isOpaqueFace ? uvs_opaque : uvs_transparent;
+        List<Float> targetNormals = isOpaqueFace ? normals_opaque : normals_transparent;
+        List<Integer> targetIndices = isOpaqueFace ? indices_opaque : indices_transparent;
+        int baseVertexIndex;
+        if (isOpaqueFace) {
+            baseVertexIndex = currentVertexOffset_opaque;
+            currentVertexOffset_opaque += 4; // Increment after use for the next face
+        } else {
+            baseVertexIndex = currentVertexOffset_transparent;
+            currentVertexOffset_transparent += 4; // Increment after use for the next face
+        }
+
+
+        // 5. Add the 4 vertices for this face to the TARGET lists
         for (int i = 0; i < 4; i++) {
-            // --- Position ---
-            // Get base vertex position relative to (0,0,0) and offset by block's position (x, y, z)
-            positions.add(Cube.POSITIONS[posStartIndex + i * 3 + 0] + x);
-            positions.add(Cube.POSITIONS[posStartIndex + i * 3 + 1] + y);
-            positions.add(Cube.POSITIONS[posStartIndex + i * 3 + 2] + z);
+            // Position (same calculation)
+            targetPositions.add(Cube.POSITIONS[posStartIndex + i * 3 + 0] + x);
+            targetPositions.add(Cube.POSITIONS[posStartIndex + i * 3 + 1] + y);
+            targetPositions.add(Cube.POSITIONS[posStartIndex + i * 3 + 2] + z);
 
-            // --- UVs (Texture Coordinates) ---
-            // Get the base UV for this vertex of the face (ranges 0.0 to 1.0)
+            // UVs (same calculation)
             float baseU = Cube.BASE_UVS[uvStartIndex + i * 2 + 0];
             float baseV = Cube.BASE_UVS[uvStartIndex + i * 2 + 1];
-
-            // Calculate the final UV coordinate within the atlas using the TextureAtlasInfo
-            // Formula: finalUV = atlasStartUV + baseUV * atlasUVSize
             float finalU = atlasInfo.u0() + baseU * atlasInfo.getWidthUV();
             float finalV = atlasInfo.v0() + baseV * atlasInfo.getHeightUV();
+            targetUvs.add(finalU);
+            targetUvs.add(finalV);
 
-            uvs.add(finalU);
-            uvs.add(finalV);
-
-            // --- Normals ---
-            // Get base normals (they are the same regardless of texture)
-            normals.add(Cube.NORMALS[normStartIndex + i * 3 + 0]);
-            normals.add(Cube.NORMALS[normStartIndex + i * 3 + 1]);
-            normals.add(Cube.NORMALS[normStartIndex + i * 3 + 2]);
+            // Normals (same calculation)
+            targetNormals.add(Cube.NORMALS[normStartIndex + i * 3 + 0]);
+            targetNormals.add(Cube.NORMALS[normStartIndex + i * 3 + 1]);
+            targetNormals.add(Cube.NORMALS[normStartIndex + i * 3 + 2]);
         }
 
-        // 5. Add the 6 indices for the two triangles forming this face quad
-        // Indices are relative to the start of *this chunk's mesh*, offset by baseVertexIndex.
-        indices.add(baseVertexIndex + 0);
-        indices.add(baseVertexIndex + 1);
-        indices.add(baseVertexIndex + 2);
-        indices.add(baseVertexIndex + 0);
-        indices.add(baseVertexIndex + 2);
-        indices.add(baseVertexIndex + 3);
+        // 6. Add the 6 indices to the TARGET list
+        targetIndices.add(baseVertexIndex + 0);
+        targetIndices.add(baseVertexIndex + 1);
+        targetIndices.add(baseVertexIndex + 2);
+        targetIndices.add(baseVertexIndex + 0);
+        targetIndices.add(baseVertexIndex + 2);
+        targetIndices.add(baseVertexIndex + 3);
 
-        return true; // Face added successfully
+        return true; // Success
     }
 
     /**
@@ -292,7 +373,8 @@ public class ChunkMesh {
                     default: // Side faces
                         return "/textures/wood.png";
                 }
-                // Add cases for other block types...
+            case BLOCK_GLASS:
+                return "/textures/glass.png";
             default:
                 System.err.println("Undefined texture mapping for block type: " + blockType);
                 return null; // Or return a default/missing texture path
@@ -336,50 +418,66 @@ public class ChunkMesh {
     // --- Example Usage (Updated) ---
     // Note: This test method now requires a valid TextureManager instance.
     public static ChunkMeshBuildResult test(TextureManager textureManager) {
-        System.out.println("Building test chunk mesh...");
-
-        // 1. Create a chunk (now requires TextureManager)
+        System.out.println("Building test chunk mesh (Opaque + Transparent)...");
         ChunkMesh chunk = new ChunkMesh(textureManager);
 
-        // 2. Set some blocks with different types
+        // --- Set Blocks ---
+        // Floor with some glass patches
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int z = 0; z < CHUNK_DEPTH; z++) {
-                chunk.setBlock(x, 0, z, BLOCK_STONE); // Floor of stone
-                if (x % 4 == 0 && z % 4 == 0) {
-                    chunk.setBlock(x, 1, z, BLOCK_GRASS); // Place some grass blocks
+                chunk.setBlock(x, 0, z, BLOCK_STONE); // Base layer
+                if (x > 4 && x < 8 && z > 4 && z < 8) {
+                    chunk.setBlock(x, 1, z, BLOCK_GLASS); // Glass panel
+                } else if (x % 4 == 0 && z % 4 == 0) {
+                    chunk.setBlock(x, 1, z, BLOCK_GRASS);
                 } else {
-                    chunk.setBlock(x, 1, z, BLOCK_DIRT); // Place some dirt blocks
+                    chunk.setBlock(x, 1, z, BLOCK_DIRT);
                 }
             }
         }
-        // Add a pillar of logs
-        chunk.setBlock(5, 1, 5, BLOCK_WOOD_LOG);
+        // Pillar with glass section
         chunk.setBlock(5, 2, 5, BLOCK_WOOD_LOG);
-        chunk.setBlock(5, 3, 5, BLOCK_WOOD_LOG);
+        chunk.setBlock(5, 3, 5, BLOCK_GLASS); // Glass in the middle
+        chunk.setBlock(5, 4, 5, BLOCK_WOOD_LOG);
 
-        // Single floating block
-        chunk.setBlock(15, 15, 15, BLOCK_STONE);
+        // Floating glass block
+        chunk.setBlock(15, 15, 15, BLOCK_GLASS);
+
+        // Fully occluded glass block (should be ignored by optimization)
+        chunk.setBlock(1, 1, 1, BLOCK_GLASS);
+        chunk.setBlock(1, 1, 2, BLOCK_STONE);
+        chunk.setBlock(1, 1, 0, BLOCK_STONE);
+        chunk.setBlock(1, 2, 1, BLOCK_STONE);
+        chunk.setBlock(1, 0, 1, BLOCK_STONE); // Already stone from floor
+        chunk.setBlock(2, 1, 1, BLOCK_STONE);
+        chunk.setBlock(0, 1, 1, BLOCK_STONE);
+        // --- End Set Blocks ---
 
 
-        // 3. Build the mesh
+        // Build Meshes
         ChunkMeshBuildResult result = chunk.buildMesh();
 
-        // For demonstration, print stats if successful
-        if (result != null && result.mesh() != null) {
-            System.out.println("Test chunk mesh built successfully.");
-            // Accessing internal lists after buildMesh is unreliable as they are reused.
-            // Get stats from the final mesh object.
-            System.out.println("Final Mesh VAO ID: " + result.mesh().getVaoId());
-            //System.out.println("Total vertices: " + result.mesh().getVertexCount());
-            System.out.println("Total indices: " + result.mesh().getIndicesCount());
+        // --- Print Stats ---
+        if (result != null && result.atlasTexture() != null) {
+            System.out.println("Test chunk build completed.");
             System.out.println("Using Atlas Texture ID: " + result.atlasTexture().getTextureId());
-            System.out.println("-----");
-        } else {
-            System.err.println("Test chunk mesh build failed!");
-            System.out.println("-----");
-        }
 
+            if (result.meshOpaque() != null) {
+                System.out.println(" Opaque Mesh VAO ID: " + result.meshOpaque().getVaoId() +
+                        //", Vertices: " + result.meshOpaque().getVertexCount() +
+                        ", Indices: " + result.meshOpaque().getIndicesCount());
+            } else { System.out.println(" Opaque Mesh: None"); }
 
-        return result; // Return the result (could be null)
+            if (result.meshTransparent() != null) {
+                System.out.println(" Transparent Mesh VAO ID: " + result.meshTransparent().getVaoId() +
+                        //", Vertices: " + result.meshTransparent().getVertexCount() +
+                        ", Indices: " + result.meshTransparent().getIndicesCount());
+            } else { System.out.println(" Transparent Mesh: None"); }
+
+        } else { System.err.println("Test chunk mesh build failed or resulted in empty geometry!"); }
+        System.out.println("-----");
+        // --- End Print Stats ---
+
+        return result;
     }
 }

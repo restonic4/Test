@@ -466,4 +466,12 @@ public class TextureManager {
     }
 
     private record FreeRectangle(int x, int y, int width, int height) {}
+
+
+
+    // --- HELPER METHODS ---
+
+    public synchronized void bakeBlockAtlas(String... resourceScanPackages) {
+
+    }
 }
