@@ -3,11 +3,15 @@ package com.chaotic_loom.game.rendering;
 import java.util.List;
 import java.util.Map;
 
-import com.chaotic_loom.game.rendering.components.*;
+import com.chaotic_loom.game.rendering.components.Camera;
+import com.chaotic_loom.game.rendering.mesh.*;
+import com.chaotic_loom.game.rendering.shader.ShaderProgram;
+import com.chaotic_loom.game.rendering.texture.Texture;
+import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
+import com.chaotic_loom.game.rendering.util.RenderStats;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joml.Matrix4f;
-import org.joml.Vector2f;
 import org.joml.Vector3f;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -62,6 +66,7 @@ public class Renderer {
             Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> atlasRenderBatch,
             RenderStats renderStats
     ) {
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         setupRendering(camera);
         renderAllBatches(atlasRenderBatch, renderStats);
         cleanupRenderingState();

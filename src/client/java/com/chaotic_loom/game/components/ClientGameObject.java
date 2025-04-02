@@ -1,8 +1,7 @@
 package com.chaotic_loom.game.components;
 
-import com.chaotic_loom.game.rendering.components.Mesh;
-import com.chaotic_loom.game.rendering.components.TextureAtlasInfo;
-import com.chaotic_loom.game.rendering.TextureManager;
+import com.chaotic_loom.game.rendering.mesh.Mesh;
+import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import org.joml.*;
 
 public class ClientGameObject extends GameObject {

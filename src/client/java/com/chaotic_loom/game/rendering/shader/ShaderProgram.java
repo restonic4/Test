@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.shader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

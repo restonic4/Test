@@ -1,9 +1,9 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.mesh;
 
 public class Cube {
 
     // Cube vertices (Pos: x,y,z)
-    private static final float[] POSITIONS = {
+    public static final float[] POSITIONS = {
             // Front face
             -0.5f, -0.5f,  0.5f,
             0.5f, -0.5f,  0.5f,
@@ -37,7 +37,7 @@ public class Cube {
     };
 
     // Indices for vertices order (defining triangles)
-    private static final int[] INDICES = {
+    public static final int[] INDICES = {
             // Front face
             0, 1, 2, 0, 2, 3,
             // Back face
@@ -52,7 +52,7 @@ public class Cube {
             20, 21, 22, 20, 22, 23
     };
 
-    private static final float[] NORMALS = {
+    public static final float[] NORMALS = {
             // Front (+Z)
             0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1,
             // Back (-Z)
@@ -67,7 +67,7 @@ public class Cube {
             -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0
     };
 
-    private static final float[] BASE_UVS = {
+    public static final float[] BASE_UVS = {
             // Front Face
             0, 0,   1, 0,   1, 1,   0, 1,
             // Back Face

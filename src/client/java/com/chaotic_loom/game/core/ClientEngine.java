@@ -5,7 +5,12 @@ import com.chaotic_loom.game.core.utils.ClientConstants;
 import com.chaotic_loom.game.events.WindowEvents;
 import com.chaotic_loom.game.networking.ClientNetworkingContext;
 import com.chaotic_loom.game.rendering.*;
-import com.chaotic_loom.game.rendering.components.*;
+import com.chaotic_loom.game.rendering.components.Camera;
+import com.chaotic_loom.game.rendering.mesh.Cube;
+import com.chaotic_loom.game.rendering.mesh.Mesh;
+import com.chaotic_loom.game.rendering.texture.Texture;
+import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
+import com.chaotic_loom.game.rendering.util.RenderStats;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -74,43 +79,9 @@ public class ClientEngine extends AbstractEngine {
             gameObjects.add(cube);
         }
 
-        // Testing batch system
-        prepareRenderBatch();
-        // Map<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>>
-        for (Map.Entry<Texture, Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>>> textureEntry : atlasRenderBatch.entrySet()) {
-            Texture texture = textureEntry.getKey();
-            Map<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>> meshMap = textureEntry.getValue();
-
-            System.out.println("texture atlas");
-            System.out.println("{");
-
-            for (Map.Entry<Mesh, Map<TextureAtlasInfo, List<Matrix4f>>> meshEntry : meshMap.entrySet()) {
-                Mesh mesh = meshEntry.getKey();
-                Map<TextureAtlasInfo, List<Matrix4f>> textureAtlasInfoMap = meshEntry.getValue();
-
-                System.out.println("    mesh");
-                System.out.println("    {");
-
-                for (Map.Entry<TextureAtlasInfo, List<Matrix4f>> textureAtlasInfoEntry : textureAtlasInfoMap.entrySet()) {
-                    TextureAtlasInfo textureAtlasInfo = textureAtlasInfoEntry.getKey();
-                    List<Matrix4f> matrix4fList = textureAtlasInfoEntry.getValue();
-
-                    System.out.println("        textureAtlasInfo");
-                    System.out.println("        {");
-
-                    for (Matrix4f matrix4f : matrix4fList) {
-                        System.out.println("            matrix");
-                    }
-
-                    System.out.println("        }");
-                }
-
-                System.out.println("    }");
-            }
-
-            System.out.println("}");
-        }
-
+        ClientGameObject cube = new ClientGameObject(ChunkMesh.test(), textureManager.getTextureInfo("/textures/dirt.png"));
+        cube.getTransform().setPosition(5, 0, 0);
+        gameObjects.add(cube);
         //TempServer.joinServer(this);
 
         // Modify viewport on window modification

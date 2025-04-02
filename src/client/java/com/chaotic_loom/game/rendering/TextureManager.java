@@ -1,7 +1,7 @@
 package com.chaotic_loom.game.rendering;
 
-import com.chaotic_loom.game.rendering.components.Texture;
-import com.chaotic_loom.game.rendering.components.TextureAtlasInfo;
+import com.chaotic_loom.game.rendering.texture.Texture;
+import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;

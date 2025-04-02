@@ -1,6 +1,6 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.texture;
 
-import jdk.jfr.Experimental;
+import com.chaotic_loom.game.util.Experimental;
 import org.lwjgl.system.MemoryStack;
 
 import java.io.IOException;
@@ -28,11 +28,13 @@ public class Texture {
     }
 
     // Creates a texture and loads data
+    @Experimental
     public Texture(String resourcePath) throws Exception {
         this(); // Generate ID
         loadFromClasspath(resourcePath);
     }
 
+    @Experimental
     public void loadFromClasspath(String resourcePath) throws Exception {
         ByteBuffer imageBuffer;
         Path path = null;
@@ -64,6 +66,7 @@ public class Texture {
         stbi_image_free(imageBuffer);
     }
 
+    @Experimental
     public void loadFromFile(Path filePath) throws Exception {
         ByteBuffer imageBuffer;
         try (MemoryStack stack = stackPush()) {
@@ -88,6 +91,7 @@ public class Texture {
         stbi_image_free(imageBuffer);
     }
 
+    @Experimental
     private void uploadTextureData(ByteBuffer imageBuffer) {
         // Bind the texture
         glBindTexture(GL_TEXTURE_2D, textureId);

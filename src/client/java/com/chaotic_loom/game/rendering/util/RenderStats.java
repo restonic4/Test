@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.util;
 
 public class RenderStats {
     // Frame Stats (Reset each frame)

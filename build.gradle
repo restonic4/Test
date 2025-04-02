@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.internal.os.OperatingSystem
 
 plugins {
     id 'java'
@@ -10,11 +11,11 @@ version = "${version}"
 
 // Determine the platform for native dependencies
 def platform
-if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+if (OperatingSystem.current().isWindows()) {
     platform = "windows"
-} else if (org.gradle.internal.os.OperatingSystem.current().isLinux()) {
+} else if (OperatingSystem.current().isLinux()) {
     platform = "linux"
-} else if (org.gradle.internal.os.OperatingSystem.current().isMacOsX()) {
+} else if (OperatingSystem.current().isMacOsX()) {
     platform = "macos"
 }
 
@@ -205,5 +206,101 @@ sourceSets {
         resources {
             srcDirs = ['src/client/resources', 'src/server/resources']
         }
+    }
+}
+
+// Test
+
+tasks.register('generateProjectTree', DefaultTask) {
+    group = "Documentation"
+    description = "Generates a file tree listing for main, client, and server source sets into project-tree.txt"
+
+    def outputFile = project.file('project-tree.txt')
+    outputs.file(outputFile)
+
+    doLast {
+        logger.lifecycle("Generating project tree structure...")
+        def outputContent = new StringBuilder()
+        def dirsToScan = [ 'src/main', 'src/client', 'src/server' ]
+
+        def command // Variable to hold the command executable path or name
+        def argsPrefix = [] // Arguments like /F
+
+        // Determine command and arguments based on OS
+        if (OperatingSystem.current().isWindows()) {
+            // --- CHANGE: Use the full path to tree.com on Windows ---
+            command = 'C:/Windows/System32/tree.com' // Use forward slashes, Groovy/Gradle handles it
+            argsPrefix.add("/F") // Include filenames
+            // Optional: Use ASCII lines if default box drawing chars cause issues
+            // argsPrefix.add("/A")
+        } else {
+            // Assume 'tree' is in PATH for Linux/macOS
+            command = "tree"
+        }
+
+        outputContent.append("Project File Tree (${new Date().format('yyyy-MM-dd HH:mm:ss')})\n")
+        outputContent.append("=====================================================\n\n")
+
+        dirsToScan.each { dirPath ->
+            def targetDir = project.file(dirPath)
+
+            if (targetDir.exists() && targetDir.isDirectory()) {
+                outputContent.append("Tree for: ${targetDir.absolutePath}\n")
+                outputContent.append("----------------------------------------\n")
+
+                // --- Arguments for exec ---
+                // Windows tree.com syntax is typically: tree [drive:][path] [/F] [/A]
+                // Gradle's exec usually takes args as a list: [arg1, arg2, ...]
+                // We will pass the path as an argument along with /F.
+                def currentArgs = []
+                currentArgs.addAll(argsPrefix) // Add /F (and potentially /A)
+                currentArgs.add(targetDir.absolutePath) // Add the target directory path
+
+                def stdout = new ByteArrayOutputStream()
+                def stderr = new ByteArrayOutputStream()
+
+                try {
+                    logger.info("Executing: {} {}", command, currentArgs.join(' ')) // Log the command being run
+                    def result = project.exec {
+                        executable = command // Use the full path on Windows now
+                        args = currentArgs
+                        standardOutput = stdout
+                        errorOutput = stderr
+                        ignoreExitValue = true
+                    }
+
+                    if (result.exitValue == 0) {
+                        // Attempt to decode using default charset, fallback to ISO-8859-1 for console output
+                        try {
+                            outputContent.append(stdout.toString(java.nio.charset.Charset.defaultCharset().name()).trim())
+                        } catch (Exception e) {
+                            logger.warn("Failed to decode tree output using default charset, trying ISO-8859-1")
+                            outputContent.append(stdout.toString("ISO-8859-1").trim())
+                        }
+                    } else {
+                        // Provide a more specific error if using the full path
+                        def errorMsg = "ERROR: Command '${command}' failed for '${dirPath}' (Exit code: ${result.exitValue}).\nStderr:\n${stderr.toString().trim()}"
+                        outputContent.append(errorMsg)
+                        logger.warn(errorMsg)
+                    }
+                } catch (Exception e) {
+                    // Update error message to reflect using the full path potentially
+                    def errorMsg = "ERROR: Could not execute command '${command}'. Ensure it exists at that path and you have permissions.\nException for dir '${dirPath}': ${e.message}"
+                    outputContent.append(errorMsg)
+                    logger.error(errorMsg, e)
+                }
+
+                outputContent.append("\n\n")
+
+            } else {
+                def warnMsg = "Directory not found or is not a directory, skipping: ${targetDir.absolutePath}"
+                outputContent.append(warnMsg + "\n\n")
+                logger.warn(warnMsg)
+            }
+        }
+
+        // Write the final accumulated content to the output file
+        outputFile.write(outputContent.toString())
+        logger.lifecycle("Project tree generated successfully: ${outputFile.absolutePath}")
     }
 }

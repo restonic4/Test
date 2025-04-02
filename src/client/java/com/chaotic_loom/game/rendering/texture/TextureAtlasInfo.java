@@ -1,4 +1,4 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.texture;
 
 import java.util.Objects;
 

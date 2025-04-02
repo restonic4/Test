@@ -1,5 +1,6 @@
-package com.chaotic_loom.game.rendering.components;
+package com.chaotic_loom.game.rendering.mesh;
 
+import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.lwjgl.system.MemoryUtil;
