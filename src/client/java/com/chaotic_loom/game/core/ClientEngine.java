@@ -79,9 +79,20 @@ public class ClientEngine extends AbstractEngine {
             gameObjects.add(cube);
         }
 
-        ClientGameObject cube = new ClientGameObject(ChunkMesh.test(), textureManager.getTextureInfo("/textures/dirt.png"));
-        cube.getTransform().setPosition(5, 0, 0);
-        gameObjects.add(cube);
+        ChunkMesh.ChunkMeshBuildResult chunkBuildResult = ChunkMesh.test(textureManager);
+        if (chunkBuildResult != null && chunkBuildResult.mesh() != null && chunkBuildResult.atlasTexture() != null) {
+            Mesh chunkMesh = chunkBuildResult.mesh();
+            Texture chunkAtlasTexture = chunkBuildResult.atlasTexture();
+            TextureAtlasInfo chunkAtlasInfo = new TextureAtlasInfo(chunkAtlasTexture, 0, 0, 1, 1);
+
+            ClientGameObject chunkGameObject = new ClientGameObject(chunkMesh, chunkAtlasInfo);
+            chunkGameObject.getTransform().setPosition(5, 0, 0); // Position the chunk
+            gameObjects.add(chunkGameObject);
+
+        } else {
+            getLogger().error("Failed to build and create chunk game object for testing.");
+        }
+
         //TempServer.joinServer(this);
 
         // Modify viewport on window modification
