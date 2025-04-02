@@ -1,5 +1,7 @@
 package com.chaotic_loom.game.registries.components;
 
+import java.util.Objects;
+
 public abstract class RegistryObject {
     private Identifier identifier;
     private boolean isPopulated = false;
@@ -23,5 +25,21 @@ public abstract class RegistryObject {
 
     public boolean isPopulated() {
         return this.isPopulated;
+    }
+
+    public int getUniqueCode() {
+        return Objects.hash(getIdentifier().getNamespace());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        RegistryObject that = (RegistryObject) o;
+        return Objects.equals(identifier, that.identifier);
+    }
+
+    @Override
+    public int hashCode() {
+        return identifier.hashCode();
     }
 }
