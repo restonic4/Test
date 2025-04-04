@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.rendering.texture.Texture;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import org.apache.logging.log4j.LogManager;
@@ -27,8 +28,6 @@ import static org.lwjgl.opengl.GL30.glGenerateMipmap;
 import static org.lwjgl.stb.STBImage.*;
 
 public class TextureManager {
-    private static final Logger LOGGER = LogManager.getLogger("TextureManager");
-
     // Configuration
     private final int maxAtlasWidth = 2048;
     private final int maxAtlasHeight = 2048;
@@ -47,39 +46,39 @@ public class TextureManager {
      */
     public synchronized void bakeAtlases(String... resourceScanPackages) {
         if (baked) {
-            LOGGER.warn("Texture atlases already baked.");
+            Loggers.TEXTURE_MANAGER.warn("Texture atlases already baked.");
             return;
         }
 
-        LOGGER.info("Starting texture atlas baking process...");
+        Loggers.TEXTURE_MANAGER.info("Starting texture atlas baking process...");
         long startTime = System.nanoTime();
 
 
         // 1. Discover Texture Resources
         List<ImageToPack> imagesToPack = findTextureResources(resourceScanPackages);
         if (imagesToPack.isEmpty()) {
-            LOGGER.warn("No textures found to bake into atlases.");
+            Loggers.TEXTURE_MANAGER.warn("No textures found to bake into atlases.");
             baked = true;
             return;
         }
 
-        LOGGER.info("Found {} texture resources to pack.", imagesToPack.size());
+        Loggers.TEXTURE_MANAGER.info("Found {} texture resources to pack.", imagesToPack.size());
 
 
         // 2. Pack Textures into Atlas Bins (Using a simple packer for example)
         List<AtlasBin> bins = packTexturesMaxRects(imagesToPack);
 
-        LOGGER.info("Packed textures into {} atlas bins.", bins.size());
+        Loggers.TEXTURE_MANAGER.info("Packed textures into {} atlas bins.", bins.size());
 
 
         // 3. Generate OpenGL Textures and UV Map
         generateAtlasTextures(bins);
-        LOGGER.info("Generated {} OpenGL atlas textures.", atlases.size());
+        Loggers.TEXTURE_MANAGER.info("Generated {} OpenGL atlas textures.", atlases.size());
 
         baked = true;
         long endTime = System.nanoTime();
 
-        LOGGER.info("Texture atlas baking completed in {} ms.", (endTime - startTime) / 1_000_000);
+        Loggers.TEXTURE_MANAGER.info("Texture atlas baking completed in {} ms.", (endTime - startTime) / 1_000_000);
     }
 
     /** Finds image resources using Reflections. */
@@ -94,7 +93,7 @@ public class TextureManager {
                 // Need to get resource as stream/URL to pass to STB info loader
                 URL resourceUrl = getClass().getClassLoader().getResource(path);
                 if (resourceUrl == null) {
-                    LOGGER.warn("Could not find URL for resource: {}", path);
+                    Loggers.TEXTURE_MANAGER.warn("Could not find URL for resource: {}", path);
                     continue;
                 }
 
@@ -102,7 +101,7 @@ public class TextureManager {
                 images.add(new ImageToPack(canonicalPath, 0, 0)); // Dimensions loaded later
 
             } catch (Exception e) {
-                LOGGER.error("Failed to process resource info: {}", path, e);
+                Loggers.TEXTURE_MANAGER.error("Failed to process resource info: {}", path, e);
             }
         }
         return images;
@@ -117,7 +116,7 @@ public class TextureManager {
      */
     private List<AtlasBin> packTexturesMaxRects(List<ImageToPack> images) {
         // Load image dimensions first
-        LOGGER.debug("Loading image dimensions...");
+        Loggers.TEXTURE_MANAGER.debug("Loading image dimensions...");
 
         for (ImageToPack img : images) {
             try (MemoryStack stack = MemoryStack.stackPush();
@@ -138,7 +137,7 @@ public class TextureManager {
                 img.height = h.get();
                 MemoryUtil.memFree(buffer);
             } catch (Exception e) {
-                LOGGER.error("Failed to load dimensions for {}: {}", img.resourcePath, e.getMessage());
+                Loggers.TEXTURE_MANAGER.error("Failed to load dimensions for {}: {}", img.resourcePath, e.getMessage());
                 img.width = 0;
                 img.height = 0;
             }
@@ -153,7 +152,7 @@ public class TextureManager {
             return Integer.compare(areaB, areaA);
         });
 
-        LOGGER.debug("Dimensions loaded. Starting MaxRects packing...");
+        Loggers.TEXTURE_MANAGER.debug("Dimensions loaded. Starting MaxRects packing...");
 
         List<AtlasBin> bins = new ArrayList<>();
 
@@ -172,7 +171,7 @@ public class TextureManager {
                 if (newBin.tryPlaceImage(img, padding)) {
                     bins.add(newBin);
                 } else {
-                    LOGGER.error("Texture {} ({}x{} with padding) is too large to fit in atlas ({}x{})",
+                    Loggers.TEXTURE_MANAGER.error("Texture {} ({}x{} with padding) is too large to fit in atlas ({}x{})",
                             img.resourcePath, img.width + padding, img.height + padding,
                             maxAtlasWidth, maxAtlasHeight);
                 }
@@ -253,7 +252,7 @@ public class TextureManager {
                 glBindTexture(GL_TEXTURE_2D, 0); // Unbind
 
                 atlases.add(atlasTexture);
-                LOGGER.info("Created Atlas Texture ID: {}", atlasTexture.getTextureId());
+                Loggers.TEXTURE_MANAGER.info("Created Atlas Texture ID: {}", atlasTexture.getTextureId());
 
                 // --- Now store TextureAtlasInfo using the created texture ---
                 for (ImageToPack img : bin.images) {
@@ -267,14 +266,14 @@ public class TextureManager {
                     TextureAtlasInfo info = new TextureAtlasInfo(atlasTexture, u0, v0, u1, v1);
                     textureInfoMap.put(img.resourcePath, info); // Store by canonical path
 
-                    LOGGER.debug("Mapped {} to Atlas {} UVs: ({},{})-({},{})", img.resourcePath, i, u0, v0, u1, v1);
+                    Loggers.TEXTURE_MANAGER.debug("Mapped {} to Atlas {} UVs: ({},{})-({},{})", img.resourcePath, i, u0, v0, u1, v1);
                 }
 
                 // --- Debug: Save atlas to file ---
                 // TODO: args
                 saveAtlasToFile(atlasBuffer, binWidth, binHeight, "atlas_" + i + ".png");
             } catch (Exception e) {
-                LOGGER.error("Failed to generate atlas texture for bin {}: {}", i, e.getMessage(), e);
+                Loggers.TEXTURE_MANAGER.error("Failed to generate atlas texture for bin {}: {}", i, e.getMessage(), e);
 
                 // Cleanup partially created texture if necessary
                 if(atlasTexture != null) atlasTexture.cleanup();
@@ -312,15 +311,15 @@ public class TextureManager {
     private void saveAtlasToFile(ByteBuffer buffer, int width, int height, String filename) {
         try {
             Path path = Paths.get(filename);
-            LOGGER.debug("Saving atlas debug image to: {}", path.toAbsolutePath());
+            Loggers.TEXTURE_MANAGER.debug("Saving atlas debug image to: {}", path.toAbsolutePath());
             // STBImageWrite expects data starting from position 0
             buffer.rewind();
             if (!STBImageWrite.stbi_write_png(path.toString(), width, height, 4, buffer, width * 4)) {
-                LOGGER.error("Failed to write debug atlas image!");
+                Loggers.TEXTURE_MANAGER.error("Failed to write debug atlas image!");
             }
             buffer.rewind(); // Rewind again after write
         } catch (Exception e) {
-            LOGGER.error("Error saving debug atlas image", e);
+            Loggers.TEXTURE_MANAGER.error("Error saving debug atlas image", e);
         }
     }
 
@@ -333,7 +332,7 @@ public class TextureManager {
      */
     public TextureAtlasInfo getTextureInfo(String resourcePath) {
         if (!baked) {
-            LOGGER.warn("Attempted to get texture info before atlases were baked.");
+            Loggers.TEXTURE_MANAGER.warn("Attempted to get texture info before atlases were baked.");
             return null;
         }
 
@@ -341,7 +340,7 @@ public class TextureManager {
         TextureAtlasInfo info = textureInfoMap.get(canonicalPath);
 
         if (info == null) {
-            LOGGER.warn("Texture info not found for: {}", canonicalPath);
+            Loggers.TEXTURE_MANAGER.warn("Texture info not found for: {}", canonicalPath);
         }
 
         return info;
@@ -358,7 +357,7 @@ public class TextureManager {
 
     /** Cleanup all loaded atlas textures */
     public void cleanup() {
-        LOGGER.info("Cleaning up TextureManager...");
+        Loggers.TEXTURE_MANAGER.info("Cleaning up TextureManager...");
 
         for (Texture atlas : atlases) {
             atlas.cleanup();
@@ -368,7 +367,7 @@ public class TextureManager {
         textureInfoMap.clear();
         baked = false;
 
-        LOGGER.info("TextureManager cleanup complete.");
+        Loggers.TEXTURE_MANAGER.info("TextureManager cleanup complete.");
     }
 
 

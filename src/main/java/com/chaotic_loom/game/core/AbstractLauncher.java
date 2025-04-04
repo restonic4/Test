@@ -7,19 +7,18 @@ import org.apache.logging.log4j.Logger;
 import java.nio.file.Path;
 
 public abstract class AbstractLauncher {
-    private static final Logger logger = LogManager.getLogger("Launcher");
     private static AbstractEngine engine;
 
     protected static void launch(AbstractEngine engine, String[] args) {
-        logger.info("Launching {} engine", engine.getEnvironment());
+        Loggers.LAUNCHER.info("Launching {} engine", engine.getEnvironment());
 
         AbstractLauncher.engine = engine;
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Launch arguments:");
+        if (Loggers.LAUNCHER.isDebugEnabled()) {
+            Loggers.LAUNCHER.debug("Launch arguments:");
 
             for (String arg : args) {
-                logger.debug(arg);
+                Loggers.LAUNCHER.debug(arg);
             }
         }
 
@@ -31,7 +30,7 @@ public abstract class AbstractLauncher {
             engine.setArgsManager(argsManager);
             engine.run();
         } catch (Exception e) {
-            logger.error("Critical Launcher error:", e);
+            Loggers.LAUNCHER.error("Critical Launcher error:", e);
             System.exit(-1);
         }
     }

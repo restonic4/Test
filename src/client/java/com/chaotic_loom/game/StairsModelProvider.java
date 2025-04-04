@@ -1,5 +1,6 @@
 package com.chaotic_loom.game;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.components.ChunkMesher;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
@@ -176,11 +177,11 @@ public class StairsModelProvider implements IBlockModelProvider {
         // --- 1. Get Texture Atlas Info ---
         TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlockFace(ctx.textureManager, block, textureFace);
         if (atlasInfo == null) {
-            System.err.printf("StairsModelProvider: Missing TextureAtlasInfo for block %s, logical face %s (part %s) at [%d,%d,%d]. Using fallback.%n",
+            Loggers.RENDERER.error("StairsModelProvider: Missing TextureAtlasInfo for block %s, logical face %s (part %s) at [%d,%d,%d]. Using fallback.%n",
                     block.getIdentifier(), textureFace, part, x, y, z);
             atlasInfo = ctx.textureManager.getTextureInfo("/textures/debug_missing.png");
             if (atlasInfo == null) {
-                System.err.println("StairsModelProvider: FATAL - Fallback texture missing!");
+                Loggers.RENDERER.error("StairsModelProvider: FATAL - Fallback texture missing!");
                 return false;
             }
         }
@@ -188,7 +189,7 @@ public class StairsModelProvider implements IBlockModelProvider {
         // --- 2. Verify Atlas Texture ---
         if (ctx.atlasTexture == null) ctx.atlasTexture = atlasInfo.atlasTexture();
         else if (ctx.atlasTexture != atlasInfo.atlasTexture()) {
-            System.err.println("StairsModelProvider: Multiple atlases detected!"); return false;
+            Loggers.RENDERER.error("StairsModelProvider: Multiple atlases detected!"); return false;
         }
 
         // --- 3. Get Geometry Data for the Part ---
@@ -198,7 +199,7 @@ public class StairsModelProvider implements IBlockModelProvider {
 
         // Check if data was actually retrieved (it should be now)
         if (positions == null || normals == null || baseUVs == null) {
-            System.err.println("StairsModelProvider: CRITICAL - Geometry data arrays are STILL null for part: " + part);
+            Loggers.RENDERER.error("StairsModelProvider: CRITICAL - Geometry data arrays are STILL null for part: {}", part);
             return false; // Hard fail if data is missing now
         }
 

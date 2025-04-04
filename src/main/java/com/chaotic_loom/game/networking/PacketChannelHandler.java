@@ -1,6 +1,7 @@
 package com.chaotic_loom.game.networking;
 
 import com.chaotic_loom.game.core.AbstractLauncher;
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.networking.components.PacketBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -21,7 +22,7 @@ public abstract class PacketChannelHandler extends ChannelInboundHandlerAdapter 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        Loggers.NETWORKING.error(cause);
         ctx.close();
     }
 }

@@ -3,6 +3,7 @@ package com.chaotic_loom.game.rendering.components;
 import com.chaotic_loom.game.CubeModelProvider;
 import com.chaotic_loom.game.IBlockModelProvider;
 import com.chaotic_loom.game.StairsModelProvider;
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.mesh.Cube;
@@ -135,11 +136,11 @@ public final class ChunkMesher {
                             if (faceToRender != null) {
                                 boolean success = modelProvider.addFaceGeometry(ctx, currentInstance, x, y, z, faceToRender);
                                 if (!success) {
-                                    System.err.println("ChunkMesher: Failed during addFaceGeometry for " + currentBlock.getIdentifier() + " at " + x + "," + y + "," + z + ". Aborting mesh.");
+                                    Loggers.RENDERER.error("ChunkMesher: Failed during addFaceGeometry for {} at {},{},{}. Aborting mesh.", currentBlock.getIdentifier(), x, y, z);
                                     return null; // Critical error from provider
                                 }
                             } else {
-                                System.err.println("ChunkMesher: Could not determine face from neighbor offset: " + offset[0]+","+offset[1]+","+offset[2]);
+                                Loggers.RENDERER.error("ChunkMesher: Could not determine face from neighbor offset: {},{},{}", offset[0], offset[1], offset[2]);
                             }
                         }
                     }
@@ -175,10 +176,10 @@ public final class ChunkMesher {
         TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlock(ctx, block, faceIndex);
         if (atlasInfo == null) {
             // Attempt to use fallback texture
-            System.err.printf("ChunkMesher: Missing TextureAtlasInfo for block " + block + ", face %d at [%d,%d,%d]. Using fallback.%n", faceIndex, x, y, z);
+            Loggers.RENDERER.error("ChunkMesher: Missing TextureAtlasInfo for block {}, face {} at [{},{},{}]. Using fallback.%n", block, faceIndex, x, y, z);
             atlasInfo = ctx.textureManager.getTextureInfo("/textures/debug_missing.png");
             if (atlasInfo == null) {
-                System.err.println("ChunkMesher: FATAL - Fallback texture '/textures/debug_missing.png' not found in TextureManager!");
+                Loggers.RENDERER.error("ChunkMesher: FATAL - Fallback texture '/textures/debug_missing.png' not found in TextureManager!");
                 return false; // Critical if fallback is missing
             }
         }
@@ -189,7 +190,7 @@ public final class ChunkMesher {
         } else if (ctx.atlasTexture != atlasInfo.atlasTexture()) {
             // This indicates a setup error - block textures are spread across multiple atlases,
             // which this simple mesher doesn't support in a single pass.
-            System.err.println("ChunkMesher: CRITICAL ERROR - Encountered multiple texture atlases during mesh generation! Cannot proceed.");
+            Loggers.RENDERER.error("ChunkMesher: CRITICAL ERROR - Encountered multiple texture atlases during mesh generation! Cannot proceed.");
             return false;
         }
 

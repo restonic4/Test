@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering.shader;
 
+import com.chaotic_loom.game.core.Loggers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joml.*;
@@ -15,8 +16,6 @@ import java.util.Map;
 import static org.lwjgl.opengl.GL20.*;
 
 public class ShaderProgram {
-    private final Logger logger = LogManager.getLogger("Renderer");
-
     private final int programId;
     private int vertexShaderId;
     private int fragmentShaderId;
@@ -73,7 +72,7 @@ public class ShaderProgram {
         // Optional: Validate program (debugging)
         glValidateProgram(programId);
         if (glGetProgrami(programId, GL_VALIDATE_STATUS) == 0) {
-            logger.error("Warning validating Shader code: {}", glGetProgramInfoLog(programId, 1024));
+            Loggers.RENDERER.error("Warning validating Shader code: {}", glGetProgramInfoLog(programId, 1024));
         }
     }
 

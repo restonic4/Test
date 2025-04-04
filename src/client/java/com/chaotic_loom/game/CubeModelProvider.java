@@ -1,5 +1,6 @@
 package com.chaotic_loom.game;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.components.ChunkMesher;
 import com.chaotic_loom.game.rendering.mesh.Cube;
@@ -40,10 +41,10 @@ public class CubeModelProvider implements IBlockModelProvider {
         // --- 1. Get Texture Atlas Info ---
         TextureAtlasInfo atlasInfo = getTextureAtlasInfoForBlockFace(ctx.textureManager, block, face);
         if (atlasInfo == null) {
-            System.err.printf("CubeModelProvider: Missing TextureAtlasInfo for block %s, face %s at [%d,%d,%d]. Using fallback.%n", block.getIdentifier(), face, x, y, z);
+            Loggers.RENDERER.error("CubeModelProvider: Missing TextureAtlasInfo for block {}, face {} at [{},{},{}]. Using fallback.%n", block.getIdentifier(), face, x, y, z);
             atlasInfo = ctx.textureManager.getTextureInfo("/textures/debug_missing.png");
             if (atlasInfo == null) {
-                System.err.println("CubeModelProvider: FATAL - Fallback texture '/textures/debug_missing.png' not found!");
+                Loggers.RENDERER.error("CubeModelProvider: FATAL - Fallback texture '/textures/debug_missing.png' not found!");
                 return false; // Critical failure
             }
         }
@@ -53,7 +54,7 @@ public class CubeModelProvider implements IBlockModelProvider {
             ctx.atlasTexture = atlasInfo.atlasTexture();
         } else if (ctx.atlasTexture != atlasInfo.atlasTexture()) {
             // This should ideally not happen if TextureManager manages atlases properly
-            System.err.println("CubeModelProvider: CRITICAL ERROR - Encountered multiple texture atlases! Check TextureManager setup.");
+            Loggers.RENDERER.error("CubeModelProvider: CRITICAL ERROR - Encountered multiple texture atlases! Check TextureManager setup.");
             return false;
         }
 
@@ -157,7 +158,7 @@ public class CubeModelProvider implements IBlockModelProvider {
 
         if (texturePath == null) {
             // Maybe try a default face if specific one is missing? Or handle upstream.
-            System.err.printf("CubeModelProvider: Texture path is null for block %s, face %s.%n", block.getIdentifier(), face);
+            Loggers.RENDERER.error("CubeModelProvider: Texture path is null for block {}, face {}", block.getIdentifier(), face);
             return null;
         }
         return textureManager.getTextureInfo(texturePath);

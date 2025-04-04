@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.world.components;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 
 import java.util.Objects;
@@ -16,10 +17,7 @@ public class BlockInstance {
                     Block.Direction.NORTH :
                     block.getSettings().getAllowedDirections().iterator().next();
 
-            // TODO: logger
-            System.err.println("Warning: Tried to set block " + block.getIdentifier() +
-                    " with disallowed direction " + direction +
-                    ". Defaulting to " + this.direction);
+            Loggers.OTHER.error("Warning: Tried to set block {} with disallowed direction {}. Defaulting to {}", block.getIdentifier(), direction, this.direction);
         } else {
             this.direction = direction != null ? direction : Block.Direction.NORTH; // Default null directions
         }

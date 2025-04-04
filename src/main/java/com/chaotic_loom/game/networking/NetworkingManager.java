@@ -2,6 +2,7 @@ package com.chaotic_loom.game.networking;
 
 import com.chaotic_loom.game.core.AbstractEngine;
 import com.chaotic_loom.game.core.AbstractLauncher;
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.networking.components.Packet;
 import com.chaotic_loom.game.networking.components.PacketBuffer;
 import com.chaotic_loom.game.registries.Registry;
@@ -23,11 +24,10 @@ public class NetworkingManager {
     public static final int INITIAL_BYTES_TO_STRIP = 4; // strip the length field from the output
 
     private Channel channel;
-    private Logger logger = LogManager.getLogger("Networking");
 
     public void send(Packet packet, PacketBuffer packetBuffer) {
         if (packet.getTarget() == AbstractLauncher.getEngine().getEnvironment()) {
-            logger.warn("The packet {} is being sent to the same environment! That doesn't make any sense!", packet.getIdentifier());
+            Loggers.NETWORKING.warn("The packet {} is being sent to the same environment! That doesn't make any sense!", packet.getIdentifier());
             return;
         }
 
@@ -40,12 +40,12 @@ public class NetworkingManager {
         Packet packet = Registry.getRegistryObject(RegistryKeys.PACKETS, packetId);
 
         if (packet == null) {
-            logger.warn("The packet {} was not found!", packetId);
+            Loggers.NETWORKING.warn("The packet {} was not found!", packetId);
             return;
         }
 
         if (packet.getTarget() != AbstractLauncher.getEngine().getEnvironment()) {
-            logger.warn("The packet {} cant be sent to this environment! That doesn't make any sense!", packet.getIdentifier());
+            Loggers.NETWORKING.warn("The packet {} cant be sent to this environment! That doesn't make any sense!", packet.getIdentifier());
             return;
         }
 
@@ -59,12 +59,9 @@ public class NetworkingManager {
     public Channel getChannel() {
         return this.channel;
     }
-    public Logger getLogger() {
-        return logger;
-    }
 
     public void cleanup() {
-        logger.info("Cleaning networking manager");
+        Loggers.NETWORKING.info("Cleaning networking manager");
 
         if (this.channel == null) {
             return;

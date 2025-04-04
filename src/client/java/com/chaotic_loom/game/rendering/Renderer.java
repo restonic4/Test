@@ -20,8 +20,6 @@ import static org.lwjgl.opengl.GL31.glDrawElementsInstanced;
 
 
 public class Renderer {
-    private final Logger logger = LogManager.getLogger("Renderer");
-
     private ShaderProgram defaultShaderProgram;
     private final Vector3f defaultObjectColor = new Vector3f(1.0f, 0.5f, 0.2f);
 
@@ -223,13 +221,5 @@ public class Renderer {
         if (defaultShaderProgram != null) {
             defaultShaderProgram.cleanup();
         }
-    }
-
-
-
-    // --- GETTERS ---
-
-    public Logger getLogger() {
-        return logger;
     }
 }

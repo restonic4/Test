@@ -12,8 +12,6 @@ import java.util.Arrays;
 import static org.lwjgl.glfw.GLFW.*;
 
 public class InputManager {
-    private final Logger logger = LogManager.getLogger("InputManager");
-
     // Keyboard state
     private final boolean[] keys = new boolean[GLFW_KEY_LAST + 1]; // Store press state
 
@@ -109,7 +107,7 @@ public class InputManager {
         previousY = mouseY;
         mouseInitialized = true; // Assume initialized after explicit get
 
-        logger.info("Input Manager Initialized.");
+        Loggers.INPUT_MANAGER.info("Input Manager Initialized.");
     }
 
     /**
@@ -242,6 +240,6 @@ public class InputManager {
             mouseButtonCallback = null;
         }
 
-        logger.info("Input Manager Cleaned Up.");
+        Loggers.INPUT_MANAGER.info("Input Manager Cleaned Up.");
     }
 }

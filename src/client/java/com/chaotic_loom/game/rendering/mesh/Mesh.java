@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering.mesh;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
@@ -71,7 +72,7 @@ public class Mesh {
                 textCoordsBuffer = MemoryUtil.memAllocFloat(textCoords.length);
                 // IMPORTANT: Ensure textCoords length matches vertex count (e.g., textCoords.length == vertexCount * 2)
                 if (textCoords.length != this.vertexCount * 2) {
-                    System.err.println("Warning: Texture coordinate array size mismatch for mesh.");
+                    Loggers.RENDERER.error("Warning: Texture coordinate array size mismatch for mesh.");
                     // Handle error or provide default coords
                 }
                 textCoordsBuffer.put(textCoords).flip();
@@ -80,7 +81,7 @@ public class Mesh {
                 glVertexAttribPointer(TEXTURE_COORDS_VBO_ID, 2, GL_FLOAT, false, 0, 0);
                 glEnableVertexAttribArray(TEXTURE_COORDS_VBO_ID);
             } else {
-                System.err.println("Warning: No texture coordinates provided for mesh.");
+                Loggers.RENDERER.error("Warning: No texture coordinates provided for mesh.");
                 // Consider disabling texturing or using default coords if needed
             }
 
@@ -92,7 +93,7 @@ public class Mesh {
                 vecNormalsBuffer = MemoryUtil.memAllocFloat(normals.length);
                 // IMPORTANT: Ensure normals length matches vertex count (e.g., normals.length == vertexCount * 3)
                 if (normals.length != this.vertexCount * 3) {
-                    System.err.println("Warning: Normal array size mismatch for mesh.");
+                    Loggers.RENDERER.error("Warning: Normal array size mismatch for mesh.");
                     // Handle error or provide default normals
                 }
                 vecNormalsBuffer.put(normals).flip();
@@ -101,7 +102,7 @@ public class Mesh {
                 glVertexAttribPointer(NORMALS_VBO_ID, 3, GL_FLOAT, false, 0, 0);
                 glEnableVertexAttribArray(NORMALS_VBO_ID);
             } else {
-                System.err.println("Warning: No normals provided for mesh.");
+                Loggers.RENDERER.error("Warning: No normals provided for mesh.");
                 // Consider disabling lighting or using default normals if needed
             }
 
@@ -195,7 +196,7 @@ public class Mesh {
             MemoryUtil.memFree(this.instanceDataBuffer); // Free old buffer
             this.instanceDataBuffer = MemoryUtil.memAllocFloat(this.maxInstances * floatsPerInstance);
 
-            System.out.println("Resized instance buffer for mesh VAO " + vaoId + " to " + this.maxInstances);
+            Loggers.RENDERER.info("Resized instance buffer for mesh VAO {} to {}", vaoId, this.maxInstances);
         }
 
         // --- Fill CPU buffer ---

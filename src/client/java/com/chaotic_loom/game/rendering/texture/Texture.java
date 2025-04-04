@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering.texture;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.util.Experimental;
 import org.lwjgl.system.MemoryStack;
 
@@ -58,7 +59,7 @@ public class Texture {
 
             imageBuffer.flip();
         } catch (IOException e) {
-            System.err.println("Failed to load texture from classpath: " + resourcePath);
+            Loggers.TEXTURE_MANAGER.error("Failed to load texture from classpath: {}", resourcePath);
             throw e;
         }
 

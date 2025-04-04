@@ -1,6 +1,7 @@
 package com.chaotic_loom.game.core.utils;
 
 import com.chaotic_loom.game.core.ClientEngine;
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.networking.ClientPacketChannelHandler;
 import com.chaotic_loom.game.networking.NetworkingManager;
 import com.chaotic_loom.game.networking.components.User;
@@ -47,7 +48,7 @@ public class TempServer {
 
                 // Connect to the server and wait until the connection is made.
                 ChannelFuture future = bootstrap.connect(host, port).sync();
-                System.out.println("Connected to server: " + future.channel().remoteAddress());
+                Loggers.NETWORKING.info("Connected to server: {}", future.channel().remoteAddress());
                 engine.getNetworkingManager().setChannel(future.channel());
                 // Keep the client running until the connection is closed.
                 future.channel().closeFuture().sync();

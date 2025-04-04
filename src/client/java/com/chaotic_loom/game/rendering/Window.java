@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.rendering;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.events.WindowEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,8 +17,6 @@ import static org.lwjgl.system.MemoryStack.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class Window {
-    private final Logger logger = LogManager.getLogger("Window");
-
     private long windowHandle;
     private final String title;
     private int width;
@@ -86,7 +85,7 @@ public class Window {
                         (vidmode.height() - pHeight.get(0)) / 2
                 );
             } else {
-                logger.error("Could not get primary monitor video mode!");
+                Loggers.WINDOW.error("Could not get primary monitor video mode!");
                 // Default position if monitor info isn't available
                 glfwSetWindowPos(windowHandle, 100, 100);
             }
@@ -111,7 +110,7 @@ public class Window {
         // Set the clear color (Black)
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-        logger.info("OpenGL Initialized: " + glGetString(GL_VERSION));
+        Loggers.WINDOW.info("OpenGL Initialized: {}", glGetString(GL_VERSION));
     }
 
     public void update() {
@@ -131,7 +130,7 @@ public class Window {
             callback.free();
         }
 
-        logger.info("Window cleaned up.");
+        Loggers.WINDOW.info("Window cleaned up.");
     }
 
     public boolean isCloseRequested() {

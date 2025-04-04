@@ -1,5 +1,6 @@
 package com.chaotic_loom.game.world;
 
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.registries.Registry;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.world.components.Block;
@@ -54,7 +55,7 @@ public class ChunkData {
      */
     public synchronized boolean setBlock(int x, int y, int z, BlockInstance block) {
         if (isOutOfBounds(x, y, z)) {
-            System.err.println("REPLACE WITH LOGGER: SetBlock coordinates out of bounds...");
+            Loggers.CHUNK.error("SetBlock coordinates out of bounds...");
             return false;
         }
 

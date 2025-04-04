@@ -1,6 +1,6 @@
 package com.chaotic_loom.game.networking;
 
-import com.chaotic_loom.game.core.AbstractLauncher;
+import com.chaotic_loom.game.core.Loggers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
@@ -11,7 +11,7 @@ import java.net.SocketAddress;
 public class ServerPacketChannelHandler extends PacketChannelHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        System.out.println("Client connected: " + ctx.channel().remoteAddress());
+        Loggers.NETWORKING.info("Client connected: {}", ctx.channel().remoteAddress());
     }
 
     @Override
@@ -21,7 +21,7 @@ public class ServerPacketChannelHandler extends PacketChannelHandler {
         Channel channel = ctx.channel();
         SocketAddress remoteAddress = channel.remoteAddress();
 
-        AbstractLauncher.getEngine().getNetworkingManager().getLogger().warn("Client disconnected, {}", remoteAddress);
+        Loggers.NETWORKING.warn("Client disconnected, {}", remoteAddress);
     }
 
     @Override
@@ -33,7 +33,7 @@ public class ServerPacketChannelHandler extends PacketChannelHandler {
                 Channel channel = ctx.channel();
                 SocketAddress remoteAddress = channel.remoteAddress();
 
-                AbstractLauncher.getEngine().getNetworkingManager().getLogger().warn("READER IDLE DETECTED for: {}. Closing connection.", remoteAddress);
+                Loggers.NETWORKING.warn("READER IDLE DETECTED for: {}. Closing connection.", remoteAddress);
 
                 ctx.close();
             }

@@ -1,6 +1,7 @@
 package com.chaotic_loom.game.registries;
 
 import com.chaotic_loom.game.core.Environment;
+import com.chaotic_loom.game.core.Loggers;
 import com.chaotic_loom.game.networking.components.Packet;
 import com.chaotic_loom.game.registries.built_in.RegistryKeys;
 import com.chaotic_loom.game.registries.components.Identifier;
@@ -22,7 +23,6 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 public class Registry {
-    public static final Logger logger = LogManager.getLogger("Registry");
     private static final Map<RegistryKey<?>, Map<Identifier, ?>> registries = new HashMap<>();
 
     private static short lastInternalMappedID = -1; // Assigns all RegistryObjects with a unique volatile small ID for memory optimization
@@ -31,7 +31,7 @@ public class Registry {
     public static <T extends RegistryObject> T register(RegistryKey<T> registryKey, Identifier identifier, T object) {
         Map<Identifier, T> registry = getOrCreateRegistrySet(registryKey);
 
-        logger.debug("Registering {} on {}!", identifier, registryKey.key());
+        Loggers.REGISTRY.debug("Registering {} on {}!", identifier, registryKey.key());
 
         if (registry.containsKey(identifier)) {
             throw new IllegalArgumentException("Duplicate identifier: " + identifier);
@@ -58,7 +58,7 @@ public class Registry {
     @SuppressWarnings("unchecked")
     private static <T extends RegistryObject> Map<Identifier, T> getOrCreateRegistrySet(RegistryKey<T> registryKey) {
         return (Map<Identifier, T>) registries.computeIfAbsent(registryKey, k -> {
-            logger.debug("Creating new registry map for {}", registryKey);
+            Loggers.REGISTRY.debug("Creating new registry map for {}", registryKey);
 
             return new HashMap<>();
         });
@@ -103,12 +103,12 @@ public class Registry {
     // Annotation
 
     public static void startRegistrationAnnotationCollection(Environment environment) {
-        logger.info("Starting registration annotation collection for {}", environment);
+        Loggers.REGISTRY.info("Starting registration annotation collection for {}", environment);
 
         Reflections reflections = new Reflections(createConfigBuilder());
         Set<Class<?>> registrarsFound = reflections.getTypesAnnotatedWith(Registration.class);
 
-        logger.debug("Total registrars found: {}", registrarsFound.size());
+        Loggers.REGISTRY.debug("Total registrars found: {}", registrarsFound.size());
 
         List<Class<?>> sortedRegistrars = registrarsFound.stream()
                 .filter(registrar -> {
@@ -122,7 +122,7 @@ public class Registry {
                 })
                 .toList();
 
-        logger.debug("Valid registrars found: {}", sortedRegistrars.size());
+        Loggers.REGISTRY.debug("Valid registrars found: {}", sortedRegistrars.size());
 
         for (Class<?> registrar : sortedRegistrars) {
             Registration annotation = registrar.getAnnotation(Registration.class);
@@ -131,15 +131,15 @@ public class Registry {
                     Method registerMethod = registrar.getDeclaredMethod("register");
 
                     if (Modifier.isStatic(registerMethod.getModifiers())) {
-                        logger.info("Executing registrar: {} with priority {}", registrar.getName(), annotation.priority());
+                        Loggers.REGISTRY.info("Executing registrar: {} with priority {}", registrar.getName(), annotation.priority());
                         registerMethod.invoke(null);
                     } else {
-                        logger.error("Method 'register' in {} is not static!", registrar.getSimpleName());
+                        Loggers.REGISTRY.error("Method 'register' in {} is not static!", registrar.getSimpleName());
                     }
                 } catch (NoSuchMethodException e) {
-                    logger.error("No 'register' method found in: {}", registrar.getSimpleName());
+                    Loggers.REGISTRY.error("No 'register' method found in: {}", registrar.getSimpleName());
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    logger.error(e);
+                    Loggers.REGISTRY.error(e);
                 }
             }
         }
@@ -149,7 +149,7 @@ public class Registry {
         ConfigurationBuilder configBuilder = new ConfigurationBuilder();
 
         // Explicitly gather URLs from standard locations
-        logger.info("Attempting to gather URLs for Reflections scanning...");
+        Loggers.REGISTRY.info("Attempting to gather URLs for Reflections scanning...");
         Set<URL> urls = new java.util.HashSet<>();
         urls.addAll(ClasspathHelper.forClassLoader()); // Context class loader
         urls.addAll(ClasspathHelper.forJavaClassPath()); // System property java.class.path
@@ -161,9 +161,9 @@ public class Registry {
         configBuilder.addUrls(urls);
         configBuilder.setScanners(Scanners.TypesAnnotated);
 
-        logger.debug("Reflections scanning configured URLs ({}):", configBuilder.getUrls().size());
+        Loggers.REGISTRY.debug("Reflections scanning configured URLs ({}):", configBuilder.getUrls().size());
         for(URL url : configBuilder.getUrls()) {
-            logger.debug(" -> {}", url);
+            Loggers.REGISTRY.debug(" -> {}", url);
         }
 
         return configBuilder;

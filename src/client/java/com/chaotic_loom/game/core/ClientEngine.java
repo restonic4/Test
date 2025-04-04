@@ -120,10 +120,10 @@ public class ClientEngine extends AbstractEngine {
         int testChunkY = 0;
         int testChunkZ = 1;
         ChunkData manualChunkData = new ChunkData(testChunkX, testChunkY, testChunkZ);
-        System.out.println("Created ChunkData at: " + testChunkX + ", " + testChunkY + ", " + testChunkZ);
+        Loggers.CHUNK.info("Created ChunkData at: " + testChunkX + ", " + testChunkY + ", " + testChunkZ);
 
         // 3. Populate ChunkData with blocks
-        System.out.println("Populating ChunkData...");
+        Loggers.CHUNK.info("Populating ChunkData...");
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int z = 0; z < CHUNK_DEPTH; z++) {
                 // Create a base layer
@@ -152,17 +152,17 @@ public class ClientEngine extends AbstractEngine {
         manualChunkData.setBlock(8, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.UP));
         manualChunkData.setBlock(10, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.DOWN));
 
-        System.out.println("Population complete.");
+        Loggers.CHUNK.info("Population complete.");
 
         // 4. Create the ClientChunk wrapper
         // If your mesher needs neighbor data, you'd pass a WorldAccessor here too.
         ClientChunk manualClientChunk = new ClientChunk(manualChunkData, textureManager /*, worldAccessor */);
-        System.out.println("Created ClientChunk wrapper.");
+        Loggers.CHUNK.info("Created ClientChunk wrapper.");
 
         // 5. Trigger mesh generation
-        System.out.println("Requesting mesh rebuild...");
+        Loggers.CHUNK.info("Requesting mesh rebuild...");
         manualClientChunk.rebuildMeshIfNeeded(); // This internally calls ChunkMesher
-        System.out.println("Mesh rebuild process finished.");
+        Loggers.CHUNK.info("Mesh rebuild process finished.");
 
         // 6. Create GameObject(s) from the result
         Texture atlas = manualClientChunk.getAtlasTexture();
@@ -171,7 +171,7 @@ public class ClientEngine extends AbstractEngine {
         Vector3f worldPos = manualClientChunk.getWorldPosition(); // Get calculated world pos
 
         if (atlas == null && (opaqueMesh != null || transparentMesh != null)) {
-            System.err.println("Warning: Meshes generated but atlas texture reference is missing!");
+            Loggers.CHUNK.error("Warning: Meshes generated but atlas texture reference is missing!");
             // Handle this case - maybe use a default atlas?
         }
 
@@ -187,9 +187,9 @@ public class ClientEngine extends AbstractEngine {
                 ClientGameObject goOpaque = new ClientGameObject(opaqueMesh, placeholderAtlasInfo);
                 goOpaque.getTransform().setPosition(worldPos);
                 gameObjects.add(goOpaque); // Add opaque first
-                System.out.println("Added Opaque GameObject for manual chunk.");
+                Loggers.CHUNK.info("Added Opaque GameObject for manual chunk.");
             } else {
-                System.out.println("Manual chunk has no opaque geometry.");
+                Loggers.CHUNK.info("Manual chunk has no opaque geometry.");
             }
 
             // Add Transparent GameObject if mesh exists
@@ -197,16 +197,16 @@ public class ClientEngine extends AbstractEngine {
                 ClientGameObject goTransparent = new ClientGameObject(transparentMesh, placeholderAtlasInfo);
                 goTransparent.getTransform().setPosition(worldPos);
                 gameObjects.add(goTransparent); // Add transparent last
-                System.out.println("Added Transparent GameObject for manual chunk.");
+                Loggers.CHUNK.info("Added Transparent GameObject for manual chunk.");
             } else {
-                System.out.println("Manual chunk has no transparent geometry.");
+                Loggers.CHUNK.info("Manual chunk has no transparent geometry.");
             }
         } else if (opaqueMesh != null || transparentMesh != null) {
-            System.err.println("Cannot create GameObjects for manual chunk - Atlas Texture is missing!");
+            Loggers.CHUNK.info("Cannot create GameObjects for manual chunk - Atlas Texture is missing!");
         } else {
-            System.out.println("Manual chunk resulted in no geometry.");
+            Loggers.CHUNK.info("Manual chunk resulted in no geometry.");
         }
-        System.out.println("--- Manual Test Chunk Creation Finished ---");
+        Loggers.CHUNK.info("--- Manual Test Chunk Creation Finished ---");
 
 
         //TempServer.joinServer(this);
