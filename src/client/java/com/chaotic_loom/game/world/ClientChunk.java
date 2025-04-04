@@ -5,6 +5,7 @@ import com.chaotic_loom.game.rendering.components.ChunkMesher;
 import com.chaotic_loom.game.rendering.mesh.Mesh;
 import com.chaotic_loom.game.rendering.texture.Texture;
 import com.chaotic_loom.game.world.components.Block;
+import com.chaotic_loom.game.world.components.BlockInstance;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
@@ -43,7 +44,7 @@ public class ClientChunk {
      * @param z Local Z
      * @param block New block
      */
-    public void updateBlock(int x, int y, int z, Block block) {
+    public void updateBlock(int x, int y, int z, BlockInstance block) {
         if (chunkData.setBlock(x, y, z, block)) {
             this.dirty = true;
             // TODO: If block is on a chunk border, mark neighbor ClientChunks as dirty too!

@@ -11,6 +11,10 @@ public class Block extends RegistryObject {
         this.settings = settings;
     }
 
+    public BlockInstance createInstance() {
+        return new BlockInstance(this, Direction.NORTH);
+    }
+
     public Settings getSettings() {
         return settings;
     }

@@ -1,6 +1,7 @@
 package com.chaotic_loom.game.rendering.components;
 
-import com.chaotic_loom.game.registries.Registry;
+import com.chaotic_loom.game.CubeModelProvider;
+import com.chaotic_loom.game.IBlockModelProvider;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.mesh.Cube;
@@ -9,6 +10,7 @@ import com.chaotic_loom.game.rendering.texture.Texture;
 import com.chaotic_loom.game.rendering.texture.TextureAtlasInfo;
 import com.chaotic_loom.game.world.ChunkData;
 import com.chaotic_loom.game.world.components.Block;
+import com.chaotic_loom.game.world.components.BlockInstance;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -31,24 +33,24 @@ public final class ChunkMesher {
     ) {}
 
     // Internal context class to hold state during mesh generation for one chunk
-    private static class MeshBuildContext {
+    public static class MeshBuildContext {
         final ChunkData chunkData;
-        final TextureManager textureManager;
+        public final TextureManager textureManager;
         // TODO: Need access to neighbor chunks for seamless meshing across boundaries
-        Texture atlasTexture = null;
+        public Texture atlasTexture = null;
 
         // Geometry Lists
-        final List<Float> positions_opaque = new ArrayList<>();
-        final List<Float> uvs_opaque = new ArrayList<>();
-        final List<Float> normals_opaque = new ArrayList<>();
-        final List<Integer> indices_opaque = new ArrayList<>();
-        int currentVertexOffset_opaque = 0;
+        public final List<Float> positions_opaque = new ArrayList<>();
+        public final List<Float> uvs_opaque = new ArrayList<>();
+        public final List<Float> normals_opaque = new ArrayList<>();
+        public final List<Integer> indices_opaque = new ArrayList<>();
+        public int currentVertexOffset_opaque = 0;
 
-        final List<Float> positions_transparent = new ArrayList<>();
-        final List<Float> uvs_transparent = new ArrayList<>();
-        final List<Float> normals_transparent = new ArrayList<>();
-        final List<Integer> indices_transparent = new ArrayList<>();
-        int currentVertexOffset_transparent = 0;
+        public final List<Float> positions_transparent = new ArrayList<>();
+        public final List<Float> uvs_transparent = new ArrayList<>();
+        public final List<Float> normals_transparent = new ArrayList<>();
+        public final List<Integer> indices_transparent = new ArrayList<>();
+        public int currentVertexOffset_transparent = 0;
 
         MeshBuildContext(ChunkData chunkData, TextureManager textureManager) {
             this.chunkData = chunkData;
@@ -62,53 +64,81 @@ public final class ChunkMesher {
      * @param textureManager The texture manager to look up atlas info.
      * @return A ChunkMeshBuildResult containing the generated meshes (or nulls) and atlas texture.
      */
+    /**
+     * Generates opaque and transparent meshes for the given chunk data.
+     */
     public static ChunkMeshBuildResult generateMeshes(ChunkData chunkData, TextureManager textureManager /*, WorldAccessor world */) {
 
+        // CHANGE: Make context accessible (if needed by external providers)
         MeshBuildContext ctx = new MeshBuildContext(chunkData, textureManager /*, world */);
 
         // Iterate through blocks within the chunk
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int y = 0; y < CHUNK_HEIGHT; y++) {
                 for (int z = 0; z < CHUNK_DEPTH; z++) {
-                    Block currentBlock = ctx.chunkData.getBlock(x, y, z);
 
-                    if (currentBlock == Blocks.AIR) continue;
+                    // CHANGE: Get BlockInstance instead of Block
+                    BlockInstance currentInstance = ctx.chunkData.getBlock(x, y, z);
+                    Block currentBlock = currentInstance.getBlock();
 
+                    if (currentBlock == Blocks.AIR) continue; // Skip air blocks
+
+                    IBlockModelProvider modelProvider = CubeModelProvider.INSTANCE; // TODO
                     boolean currentIsOpaque = !currentBlock.getSettings().isTransparent();
 
-                    System.out.println(currentBlock);
-
-                    // Define neighbour RELATIVE offsets for cleaner loop
+                    // Define neighbour RELATIVE offsets
+                    // Structure: {dx, dy, dz}
                     int[][] neighborOffsets = {
-                            { 0,  0,  1, 0}, { 0,  0, -1, 1}, { 0,  1,  0, 2},
-                            { 0, -1,  0, 3}, { 1,  0,  0, 4}, {-1,  0,  0, 5}
+                            { 0,  0,  1}, { 0,  0, -1}, { 0,  1,  0},
+                            { 0, -1,  0}, { 1,  0,  0}, {-1,  0,  0}
                     };
 
                     for (int[] offset : neighborOffsets) {
                         int nx = x + offset[0];
                         int ny = y + offset[1];
                         int nz = z + offset[2];
-                        byte faceIndex = (byte) offset[3];
 
-                        // Use chunkData's getBlock to handle boundary checks simply (returns AIR if out)
-                        // For seamless meshing, a WorldAccessor would be needed here to query actual neighbor chunks.
-                        Block neighborBlock = ctx.chunkData.getBlock(nx, ny, nz);
+                        // CHANGE: Get neighbor BlockInstance and Block
+                        BlockInstance neighborInstance = ctx.chunkData.getBlock(nx, ny, nz);
+                        Block neighborBlock = neighborInstance.getBlock();
+
+                        // Optimization: If neighbor is null (shouldn't happen with new getBlockInstance), treat as AIR.
+                        if (neighborBlock == null) neighborBlock = Blocks.AIR;
 
                         boolean neighborIsOpaque = !neighborBlock.getSettings().isTransparent();
 
-                        // Visibility Rule (Occlusion check reverted as requested)
+
+                        // --- Visibility Rule (Occlusion Culling) ---
+                        // Render face if:
+                        // 1. Current block is opaque AND neighbor is transparent/air
+                        // 2. Current block is transparent AND neighbor is air (don't render transparent faces against other transparent/opaque blocks)
+                        // 3. Optional: Render if current block and neighbor block are different transparent types (e.g. water against glass) - more complex rule
                         boolean shouldRenderFace = false;
-                        if (currentIsOpaque && !neighborIsOpaque) {
-                            shouldRenderFace = true;
+                        if (currentBlock == neighborBlock && currentIsOpaque == neighborIsOpaque) {
+                            // Don't render faces between identical blocks (e.g., stone touching stone)
+                            shouldRenderFace = false;
+                        } else if (currentIsOpaque && !neighborIsOpaque) {
+                            shouldRenderFace = true; // Opaque block against transparent/air
                         } else if (!currentIsOpaque && neighborBlock == Blocks.AIR) {
-                            shouldRenderFace = true;
+                            shouldRenderFace = true; // Transparent block against air ONLY
                         }
+                        // Add more rules if needed (e.g. different transparent blocks)
+
 
                         if (shouldRenderFace) {
-                            boolean success = addFace(ctx, currentIsOpaque, x, y, z, currentBlock, faceIndex);
-                            if (!success) {
-                                System.err.println("ChunkMesher: Failed during addFace at " + x + "," + y + "," + z + ". Aborting mesh generation for this chunk.");
-                                return null; // Critical error
+                            // CHANGE: Use the model provider to add the face
+
+                            // Determine which face needs to be rendered based on the neighbor offset
+                            Block.Face faceToRender = modelProvider.getFaceFromNeighborOffset(offset[0], offset[1], offset[2]);
+
+                            if (faceToRender != null) {
+                                boolean success = modelProvider.addFaceGeometry(ctx, currentInstance, x, y, z, faceToRender);
+                                if (!success) {
+                                    System.err.println("ChunkMesher: Failed during addFaceGeometry for " + currentBlock.getIdentifier() + " at " + x + "," + y + "," + z + ". Aborting mesh.");
+                                    return null; // Critical error from provider
+                                }
+                            } else {
+                                System.err.println("ChunkMesher: Could not determine face from neighbor offset: " + offset[0]+","+offset[1]+","+offset[2]);
                             }
                         }
                     }
@@ -116,14 +146,9 @@ public final class ChunkMesher {
             }
         }
 
-        // Build Mesh Objects from context lists
+        // Build Mesh Objects from context lists (unchanged)
         Mesh meshOpaque = buildMeshFromContext(ctx.positions_opaque, ctx.uvs_opaque, ctx.normals_opaque, ctx.indices_opaque);
         Mesh meshTransparent = buildMeshFromContext(ctx.positions_transparent, ctx.uvs_transparent, ctx.normals_transparent, ctx.indices_transparent);
-
-        if (meshOpaque == null && meshTransparent == null) {
-            // System.out.println("ChunkMesher: Chunk resulted in no geometry."); // Optional: Logging
-            return null;
-        }
 
         return new ChunkMeshBuildResult(meshOpaque, meshTransparent, ctx.atlasTexture);
     }

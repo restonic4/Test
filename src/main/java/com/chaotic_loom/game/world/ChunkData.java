@@ -3,12 +3,13 @@ package com.chaotic_loom.game.world;
 import com.chaotic_loom.game.registries.Registry;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.world.components.Block;
+import com.chaotic_loom.game.world.components.BlockInstance;
 
 import static com.chaotic_loom.game.core.util.SharedConstants.*;
 
 public class ChunkData {
     // Core data: 3D array of block volatile IDs.
-    private final short[][][] blocks;
+    private final BlockInstance[][][] blocks;
 
     // Store chunk's position in the world grid
     private final int chunkX, chunkY, chunkZ;
@@ -24,7 +25,15 @@ public class ChunkData {
         this.chunkY = chunkY;
         this.chunkZ = chunkZ;
 
-        this.blocks = new short[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
+        this.blocks = new BlockInstance[CHUNK_WIDTH][CHUNK_HEIGHT][CHUNK_DEPTH];
+
+        for (int x = 0; x < CHUNK_WIDTH; x++) {
+            for (int y = 0; y < CHUNK_HEIGHT; y++) {
+                for (int z = 0; z < CHUNK_DEPTH; z++) {
+                    this.blocks[x][y][z] = Blocks.AIR.createInstance();
+                }
+            }
+        }
     }
 
     // --- Getters for Coordinates ---
@@ -43,13 +52,13 @@ public class ChunkData {
      * @param block The new block.
      * @return true if the block was set successfully, false if out of bounds.
      */
-    public synchronized boolean setBlock(int x, int y, int z, Block block) {
+    public synchronized boolean setBlock(int x, int y, int z, BlockInstance block) {
         if (isOutOfBounds(x, y, z)) {
             System.err.println("REPLACE WITH LOGGER: SetBlock coordinates out of bounds...");
             return false;
         }
 
-        blocks[x][y][z] = block.getInternalMappedRegistryID();
+        blocks[x][y][z] = block;
         return true;
     }
 
@@ -62,16 +71,16 @@ public class ChunkData {
      * @param z Local Z (0 to CHUNK_DEPTH - 1)
      * @return The block type ID, or BLOCK_AIR if out of bounds.
      */
-    public Block getBlock(int x, int y, int z) {
-        short internalBlockID = -1;
+    public BlockInstance getBlock(int x, int y, int z) {
+        BlockInstance blockInstance;
 
         if (isOutOfBounds(x, y, z)) {
-            internalBlockID = Blocks.AIR.getInternalMappedRegistryID();
+            blockInstance = Blocks.AIR.createInstance();
         } else {
-            internalBlockID =  blocks[x][y][z];
+            blockInstance =  blocks[x][y][z];
         }
 
-        return (Block) Registry.getRegistryObject(internalBlockID);
+        return blockInstance;
     }
 
     /**
@@ -94,7 +103,7 @@ public class ChunkData {
      * Modifying the returned array directly bypasses bounds checks and synchronization.
      * @return The internal 3D byte array of block IDs.
      */
-    public short[][][] getBlocksRaw() {
+    public BlockInstance[][][] getBlocksRaw() {
         return blocks;
     }
 }

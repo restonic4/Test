@@ -125,23 +125,23 @@ public class ClientEngine extends AbstractEngine {
         for (int x = 0; x < CHUNK_WIDTH; x++) {
             for (int z = 0; z < CHUNK_DEPTH; z++) {
                 // Create a base layer
-                manualChunkData.setBlock(x, 0, z, Blocks.STONE);
+                manualChunkData.setBlock(x, 0, z, Blocks.STONE.createInstance());
 
                 // Add some features on layer 1
                 if (x == 0 || x == CHUNK_WIDTH - 1 || z == 0 || z == CHUNK_DEPTH - 1) {
-                    manualChunkData.setBlock(x, 1, z, Blocks.WOOD); // Border of logs
+                    manualChunkData.setBlock(x, 1, z, Blocks.WOOD.createInstance()); // Border of logs
                 } else if (x > 5 && x < 10 && z > 5 && z < 10) {
-                    manualChunkData.setBlock(x, 1, z, Blocks.GLASS); // Central glass area
+                    manualChunkData.setBlock(x, 1, z, Blocks.GLASS.createInstance()); // Central glass area
                 } else {
-                    manualChunkData.setBlock(x, 1, z, Blocks.DIRT); // Fill with dirt
+                    manualChunkData.setBlock(x, 1, z, Blocks.DIRT.createInstance()); // Fill with dirt
                 }
             }
         }
         // Add a small pillar
-        manualChunkData.setBlock(2, 1, 2, Blocks.STONE);
-        manualChunkData.setBlock(2, 2, 2, Blocks.STONE);
-        manualChunkData.setBlock(2, 3, 2, Blocks.GLASS);
-        manualChunkData.setBlock(2, 4, 2, Blocks.STONE);
+        manualChunkData.setBlock(2, 1, 2, Blocks.STONE.createInstance());
+        manualChunkData.setBlock(2, 2, 2, Blocks.STONE.createInstance());
+        manualChunkData.setBlock(2, 3, 2, Blocks.GLASS.createInstance());
+        manualChunkData.setBlock(2, 4, 2, Blocks.STONE.createInstance());
         System.out.println("Population complete.");
 
         // 4. Create the ClientChunk wrapper
