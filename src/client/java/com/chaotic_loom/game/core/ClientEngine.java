@@ -3,6 +3,8 @@ package com.chaotic_loom.game.core;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.world.ChunkData;
 import com.chaotic_loom.game.world.ClientChunk;
+import com.chaotic_loom.game.world.components.Block;
+import com.chaotic_loom.game.world.components.BlockInstance;
 import com.chaotic_loom.game.world.components.ClientGameObject;
 import com.chaotic_loom.game.core.utils.ClientConstants;
 import com.chaotic_loom.game.events.WindowEvents;
@@ -142,6 +144,14 @@ public class ClientEngine extends AbstractEngine {
         manualChunkData.setBlock(2, 2, 2, Blocks.STONE.createInstance());
         manualChunkData.setBlock(2, 3, 2, Blocks.GLASS.createInstance());
         manualChunkData.setBlock(2, 4, 2, Blocks.STONE.createInstance());
+
+        manualChunkData.setBlock(0, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.NORTH));
+        manualChunkData.setBlock(2, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.SOUTH));
+        manualChunkData.setBlock(4, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.EAST));
+        manualChunkData.setBlock(6, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.WEST));
+        manualChunkData.setBlock(8, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.UP));
+        manualChunkData.setBlock(10, 4, 0, new BlockInstance(Blocks.LOG, Block.Direction.DOWN));
+
         System.out.println("Population complete.");
 
         // 4. Create the ClientChunk wrapper

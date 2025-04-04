@@ -101,7 +101,9 @@ public class Blocks {
                                 .setCollider(true)
                                 .setFaceProperties(
                                         new Block.FaceProperties.Builder()
-                                                .setTextures("textures/log.png")
+                                                .setTextures("textures/wood.png")
+                                                .setFaceTexture(Block.Face.TOP, "textures/stone.png")
+                                                .setFaceTexture(Block.Face.FRONT, "textures/dirt.png")
                                                 .build()
                                 )
                                 .allowAllDirections()
