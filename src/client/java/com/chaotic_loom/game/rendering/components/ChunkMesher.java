@@ -2,6 +2,7 @@ package com.chaotic_loom.game.rendering.components;
 
 import com.chaotic_loom.game.CubeModelProvider;
 import com.chaotic_loom.game.IBlockModelProvider;
+import com.chaotic_loom.game.StairsModelProvider;
 import com.chaotic_loom.game.registries.built_in.Blocks;
 import com.chaotic_loom.game.rendering.TextureManager;
 import com.chaotic_loom.game.rendering.mesh.Cube;
@@ -83,7 +84,7 @@ public final class ChunkMesher {
 
                     if (currentBlock == Blocks.AIR) continue; // Skip air blocks
 
-                    IBlockModelProvider modelProvider = CubeModelProvider.INSTANCE; // TODO
+                    IBlockModelProvider modelProvider = StairsModelProvider.INSTANCE; // TODO
                     boolean currentIsOpaque = !currentBlock.getSettings().isTransparent();
 
                     // Define neighbour RELATIVE offsets
